@@ -185,7 +185,7 @@ func youtube(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage)
 			continue
 		}
 
-		writeMessage <- IRCMessage{parsed.channel, html.UnescapeString(matchTitle.FindAllStringSubmatch(string(body), -1)[0][1] + " by " +
+		writeMessage <- IRCMessage{parsed.channel, html.UnescapeString(matchTitle.FindAllStringSubmatch(string(body), -1)[0][1] + " uploaded by " +
 			matchUser.FindAllStringSubmatch(string(body), -1)[0][1])}
 	}
 }
