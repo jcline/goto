@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/RecursiveForest/goty" //fork and maintain building copy
+	"github.com/jcline/goty"
 	"encoding/xml" // gelbooru parsing
 	"errors"
 	"fmt"
