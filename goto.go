@@ -163,8 +163,8 @@ func amiami(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage) 
 }
 
 func youtube(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage) {
-	matchTitle := regexp.MustCompile(`.*<title>(.+)</title>.*`)
-	matchUser := regexp.MustCompile(`.*<a class=".*yt-user-name[^>]+>(.+)</a>.*`)
+	matchTitle := regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
+	matchUser := regexp.MustCompile(`.*<a[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
 	for msg := range event {
 		parsed, err := getChannel(msg)
 		if err != nil {
