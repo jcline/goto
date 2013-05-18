@@ -50,10 +50,10 @@ func main() {
 	writeMessage := make(chan IRCMessage, 1000)
 
 	go messageHandler(con, writeMessage)
-	go gelbooru(con, gelbooruEvent, writeMessage)
-	go youtube(con, youtubeEvent, writeMessage)
-	go amiami(con, amiAmiEvent, writeMessage)
-	go Bastille(con, BastilleEvent, writeMessage)
+	go gelbooru(gelbooruEvent, writeMessage)
+	go youtube(youtubeEvent, writeMessage)
+	go amiami(amiAmiEvent, writeMessage)
+	go Bastille(BastilleEvent, writeMessage)
 
 	auth(con, writeMessage)
 	con.Write <- "JOIN " + args[4]
@@ -119,7 +119,7 @@ func getChannel(msg string) (*IRCMessage, error) {
 	return imsg, nil
 }
 
-func Bastille(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage) {
+func Bastille(event chan string, writeMessage chan IRCMessage) {
 	msgs := []string{
 		"Bastille, yo brodudedudebro!!!!1",
 		"Bastille, wat up homie",
@@ -137,7 +137,7 @@ func Bastille(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage
 	}
 }
 
-func amiami(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage) {
+func amiami(event chan string, writeMessage chan IRCMessage) {
 	matchTitle := regexp.MustCompile(`.*<meta property="og:title" content="(.+)" />.*`)
 	matchDiscount := regexp.MustCompile(`[0-9]+\%OFF `)
 	for msg := range event {
@@ -163,7 +163,7 @@ func amiami(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage) 
 	}
 }
 
-func youtube(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage) {
+func youtube(event chan string, writeMessage chan IRCMessage) {
 	matchTitle := regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
 	matchUser := regexp.MustCompile(`.*<a[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
 	for msg := range event {
@@ -190,7 +190,7 @@ func youtube(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage)
 	}
 }
 
-func gelbooru(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage) {
+func gelbooru(event chan string, writeMessage chan IRCMessage) {
 	type Post struct {
 		post string
 		tags string `xml:",attr"`
