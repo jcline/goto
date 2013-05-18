@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jcline/goty"
+	"html"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -184,8 +185,8 @@ func youtube(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage)
 			continue
 		}
 
-		writeMessage <- IRCMessage{parsed.channel, matchTitle.FindAllStringSubmatch(string(body), -1)[0][1] + " by " +
-			matchUser.FindAllStringSubmatch(string(body), -1)[0][1]}
+		writeMessage <- IRCMessage{parsed.channel, html.UnescapeString(matchTitle.FindAllStringSubmatch(string(body), -1)[0][1] + " by " +
+			matchUser.FindAllStringSubmatch(string(body), -1)[0][1])}
 	}
 }
 
