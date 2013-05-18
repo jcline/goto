@@ -43,39 +43,41 @@ func main() {
 		fmt.Fprintf(os.Stderr, "err: %s\n", err.Error())
 	}
 
-	gelbooruEvent := make(chan string, 1000)
-	youtubeEvent := make(chan string, 1000)
-	amiAmiEvent := make(chan string, 1000)
-	BastilleEvent := make(chan string, 1000)
+	gelbooruEvent := make(chan unparsedMessage, 1000)
+	youtubeEvent := make(chan unparsedMessage, 1000)
+	amiAmiEvent := make(chan unparsedMessage, 1000)
+	bastilleEvent := make(chan unparsedMessage, 1000)
 	writeMessage := make(chan IRCMessage, 1000)
 
 	go messageHandler(con, writeMessage)
 	go gelbooru(gelbooruEvent, writeMessage)
 	go youtube(youtubeEvent, writeMessage)
 	go amiami(amiAmiEvent, writeMessage)
-	go Bastille(BastilleEvent, writeMessage)
+	go bastille(bastilleEvent, writeMessage)
 
 	auth(con, writeMessage)
 	con.Write <- "JOIN " + args[4]
 
-	for {
-		msg, ok := <-con.Read
-		if !ok {
-			break
-		}
-		fmt.Printf("%s\n", msg)
+	for msg := range con.Read {
+		prepared := unparsedMessage{msg, time.Now()}
+		fmt.Printf("%s||%s\n", prepared.when, prepared.msg)
 
 		switch {
 		case matchGelbooru.MatchString(msg):
 			//gelbooruEvent <- matchGelbooru.FindAllStringSubmatch(msg, -1)[0][1]
 		case matchYouTube.MatchString(msg):
-			youtubeEvent <- msg
+			youtubeEvent <- prepared
 		case matchAmiAmi.MatchString(msg):
-			amiAmiEvent <- msg
+			amiAmiEvent <- prepared
 		default:
 		}
 	}
 	con.Close()
+}
+
+type unparsedMessage struct {
+	msg  string
+	when time.Time
 }
 
 type IRCMessage struct {
@@ -119,7 +121,7 @@ func getChannel(msg string) (*IRCMessage, error) {
 	return imsg, nil
 }
 
-func Bastille(event chan string, writeMessage chan IRCMessage) {
+func bastille(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	msgs := []string{
 		"Bastille, yo brodudedudebro!!!!1",
 		"Bastille, wat up homie",
@@ -129,7 +131,7 @@ func Bastille(event chan string, writeMessage chan IRCMessage) {
 	}
 
 	for msg := range event {
-		parsed, err := getChannel(msg)
+		parsed, err := getChannel(msg.msg)
 		if err != nil {
 			continue
 		}
@@ -137,11 +139,11 @@ func Bastille(event chan string, writeMessage chan IRCMessage) {
 	}
 }
 
-func amiami(event chan string, writeMessage chan IRCMessage) {
+func amiami(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	matchTitle := regexp.MustCompile(`.*<meta property="og:title" content="(.+)" />.*`)
 	matchDiscount := regexp.MustCompile(`[0-9]+\%OFF `)
 	for msg := range event {
-		parsed, err := getChannel(msg)
+		parsed, err := getChannel(msg.msg)
 		if err != nil {
 			continue
 		}
@@ -163,11 +165,11 @@ func amiami(event chan string, writeMessage chan IRCMessage) {
 	}
 }
 
-func youtube(event chan string, writeMessage chan IRCMessage) {
+func youtube(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	matchTitle := regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
 	matchUser := regexp.MustCompile(`.*<a[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
 	for msg := range event {
-		parsed, err := getChannel(msg)
+		parsed, err := getChannel(msg.msg)
 		if err != nil {
 			continue
 		}
@@ -190,19 +192,19 @@ func youtube(event chan string, writeMessage chan IRCMessage) {
 	}
 }
 
-func gelbooru(event chan string, writeMessage chan IRCMessage) {
+func gelbooru(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	type Post struct {
 		post string
 		tags string `xml:",attr"`
 	}
 
 	for msg := range event {
-		parsed, err := getChannel(msg)
+		parsed, err := getChannel(msg.msg)
 		if err != nil {
 			continue
 		}
 
-		resp, err := http.Get("http://gelbooru.com/index.php?page=dapi&s=post&q=index&tags&id=" + msg)
+		resp, err := http.Get("http://gelbooru.com/index.php?page=dapi&s=post&q=index&tags&id=" + msg.msg)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			continue
