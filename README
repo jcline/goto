@@ -1,0 +1,28 @@
+goto - go troll others
+
+A simple IRC bot using goty (go troll yourself, https://github.com/RecursiveForest/goty).
+
+Requirements:
+	go
+	goty (my fork: https://github.com/jcline/goty)
+
+Usage:
+	goto "irc.freenode.net:6666" username realname "#somechannel"
+
+Features:
+	Gets YouTube titles for links pasted in channel
+	Gets AmiAmi titles for links pasted in channel
+	Private message support
+	Rate limited (1msg/10s/channel and private message by default)
+	
+In Progress:
+	Gelbooru tags for image links pasted in channel
+	Troll Bastille randomly
+
+Planned:
+	Other booru tags?
+	More generic way to add features
+	Config file
+	Multi channel support
+	reddit API silliness
+
