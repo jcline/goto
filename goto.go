@@ -1,14 +1,14 @@
 package main
 
 import (
-	"github.com/jcline/goty"
 	"encoding/xml" // gelbooru parsing
 	"errors"
 	"fmt"
+	"github.com/jcline/goty"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
-	"math/rand"
 	"regexp"
 	"time"
 )
@@ -19,16 +19,28 @@ var matchGelbooru = regexp.MustCompile(`.*\Qhttp://gelbooru.com/index.php?page=p
 var matchYouTube = regexp.MustCompile(`.*(https?://(?:www\.|)youtu(?:\.be|be\.com)/[^ ]+).*`)
 var matchAmiAmi = regexp.MustCompile(`(https?://(?:www\.|)amiami.com/[^/]+/detail/.*)`)
 
+func auth(con *goty.IRCConn, writeMessage chan IRCMessage) {
+	var pswd string
+	_, err := fmt.Scanf("%s", &pswd)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	msg := IRCMessage{"NickServ", "IDENTIFY Laala " + pswd}
+	writeMessage <- msg
+}
+
 func main() {
 	args := os.Args
-	if len(args) < 4 { os.Exit(1) }
+	if len(args) < 4 {
+		os.Exit(1)
+	}
 
 	con, err := goty.Dial(args[1], args[2], args[3])
 	user = args[2]
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "err: %s\n", err.Error())
 	}
-	con.Write <- "JOIN " + args[4]
 
 	gelbooruEvent := make(chan string, 1000)
 	youtubeEvent := make(chan string, 1000)
@@ -42,9 +54,14 @@ func main() {
 	go amiami(con, amiAmiEvent, writeMessage)
 	go Bastille(con, BastilleEvent, writeMessage)
 
+	auth(con, writeMessage)
+	con.Write <- "JOIN " + args[4]
+
 	for {
 		msg, ok := <-con.Read
-		if !ok { break }
+		if !ok {
+			break
+		}
 		fmt.Printf("%s\n", msg)
 
 		switch {
@@ -62,7 +79,7 @@ func main() {
 
 type IRCMessage struct {
 	channel string
-	msg string
+	msg     string
 }
 
 func message(con *goty.IRCConn, msg IRCMessage) {
@@ -70,22 +87,29 @@ func message(con *goty.IRCConn, msg IRCMessage) {
 }
 
 func messageHandler(con *goty.IRCConn, event chan IRCMessage) {
-	books := map[string] time.Time {}
+	books := map[string]time.Time{}
 	for msg := range event {
 		now := time.Now()
-		if now.Sub(books[msg.channel]) < time.Second*10 {continue}
+		if now.Sub(books[msg.channel]) < time.Second*10 {
+			continue
+		}
 		books[msg.channel] = now
 		message(con, msg)
 	}
 }
 
 var PRIVMSG = regexp.MustCompile(`:(.+)![^ ]+ PRIVMSG ([^ ]+) :(.*)`)
+
 func getChannel(msg string) (*IRCMessage, error) {
 	// :nick!~realname@0.0.0.0 PRIVMSG #chan :msg
 	imsg := new(IRCMessage)
 	match := PRIVMSG.FindAllStringSubmatch(msg, -1)
-	if len(match) < 1 { return imsg, errors.New("could not parse message") }
-	if len(match[0]) < 3 { return imsg, errors.New("could not parse message") }
+	if len(match) < 1 {
+		return imsg, errors.New("could not parse message")
+	}
+	if len(match[0]) < 3 {
+		return imsg, errors.New("could not parse message")
+	}
 	imsg.channel = match[0][2]
 	if imsg.channel == user {
 		imsg.channel = match[0][1]
@@ -104,8 +128,10 @@ func Bastille(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage
 	}
 
 	for msg := range event {
-		parsed , err := getChannel(msg)
-		if err != nil {continue}
+		parsed, err := getChannel(msg)
+		if err != nil {
+			continue
+		}
 		writeMessage <- IRCMessage{parsed.channel, msgs[rand.Intn(len(msgs))-1]}
 	}
 }
@@ -115,7 +141,9 @@ func amiami(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage) 
 	matchDiscount := regexp.MustCompile(`[0-9]+\%OFF `)
 	for msg := range event {
 		parsed, err := getChannel(msg)
-		if err != nil {continue}
+		if err != nil {
+			continue
+		}
 
 		resp, err := http.Get(matchAmiAmi.FindAllStringSubmatch(parsed.msg, -1)[0][1])
 		if err != nil {
@@ -136,9 +164,12 @@ func amiami(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage) 
 
 func youtube(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage) {
 	matchTitle := regexp.MustCompile(`.*<title>(.+)</title>.*`)
+	matchUser := regexp.MustCompile(`.*<a class=".*yt-user-name[^>]+>(.+)</a>.*`)
 	for msg := range event {
 		parsed, err := getChannel(msg)
-		if err != nil {continue}
+		if err != nil {
+			continue
+		}
 
 		resp, err := http.Get(matchYouTube.FindAllStringSubmatch(parsed.msg, -1)[0][1])
 		if err != nil {
@@ -153,7 +184,8 @@ func youtube(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage)
 			continue
 		}
 
-		writeMessage <- IRCMessage{parsed.channel, matchTitle.FindAllStringSubmatch(string(body), -1)[0][1]}
+		writeMessage <- IRCMessage{parsed.channel, matchTitle.FindAllStringSubmatch(string(body), -1)[0][1] + " by " +
+			matchUser.FindAllStringSubmatch(string(body), -1)[0][1]}
 	}
 }
 
@@ -165,7 +197,9 @@ func gelbooru(con *goty.IRCConn, event chan string, writeMessage chan IRCMessage
 
 	for msg := range event {
 		parsed, err := getChannel(msg)
-		if err != nil {continue}
+		if err != nil {
+			continue
+		}
 
 		resp, err := http.Get("http://gelbooru.com/index.php?page=dapi&s=post&q=index&tags&id=" + msg)
 		if err != nil {
