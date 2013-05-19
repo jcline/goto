@@ -59,7 +59,7 @@ func main() {
 	go reddit(redditEvent, writeMessage)
 	go youtube(youtubeEvent, writeMessage)
 
-	//auth(con, writeMessage)
+	auth(con, writeMessage)
 	con.Write <- "JOIN " + args[4]
 
 	for msg := range con.Read {
