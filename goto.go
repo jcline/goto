@@ -144,57 +144,84 @@ func bastille(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	}
 }
 
-func amiami(event chan unparsedMessage, writeMessage chan IRCMessage) {
-	matchTitle := regexp.MustCompile(`.*<meta property="og:title" content="(.+)" />.*`)
-	matchDiscount := regexp.MustCompile(`[0-9]+\%OFF `)
+type uriFunc func(*string) (*string, error)
+type writeFunc func(*IRCMessage, *string) error
+
+func scrapeAndSend(event chan unparsedMessage, findUri uriFunc, write writeFunc) {
 	for msg := range event {
 		parsed, err := getMsgInfo(msg.msg)
 		if err != nil {
 			continue
 		}
 
-		resp, err := http.Get(matchAmiAmi.FindAllStringSubmatch(parsed.msg, -1)[0][1])
+		uri, err := findUri(&parsed.msg)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+			continue
+		}
+		resp, err := http.Get(*uri)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			continue
 		}
 
-		body, err := ioutil.ReadAll(resp.Body)
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			continue
 		}
+		body := string(bodyBytes)
 
-		writeMessage <- IRCMessage{parsed.channel, matchDiscount.ReplaceAllLiteralString(matchTitle.FindAllStringSubmatch(string(body), -1)[0][1], ""), parsed.user}
+		if write(parsed, &body) != nil {
+			continue
+		}
 	}
+}
+
+func getFirstMatch(re *regexp.Regexp, matchee *string) (*string, error) {
+	match := re.FindAllStringSubmatch(*matchee, -1)
+	if len(match) < 1 {
+		return nil, errors.New("Could not match")
+	}
+	if len(match[0]) < 2 {
+		return nil, errors.New("Could not match")
+	}
+	return &match[0][1], nil
+}
+
+func amiami(event chan unparsedMessage, writeMessage chan IRCMessage) {
+	matchTitle := regexp.MustCompile(`.*<meta property="og:title" content="(.+)" />.*`)
+	matchDiscount := regexp.MustCompile(`[0-9]+\%OFF `)
+	scrapeAndSend(event, func(msg *string) (*string, error) { return getFirstMatch(matchAmiAmi, msg) },
+		func(msg *IRCMessage, body *string) error {
+			title, err := getFirstMatch(matchTitle, body)
+			if err != nil {
+				return err
+			}
+
+			writeMessage <- IRCMessage{msg.channel, matchDiscount.ReplaceAllLiteralString(*title, ""), msg.user}
+			return nil
+		})
 }
 
 func youtube(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	matchTitle := regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
 	matchUser := regexp.MustCompile(`.*<a[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
-	for msg := range event {
-		parsed, err := getMsgInfo(msg.msg)
-		if err != nil {
-			continue
-		}
 
-		resp, err := http.Get(matchYouTube.FindAllStringSubmatch(parsed.msg, -1)[0][1])
-		if err != nil {
-			fmt.Printf("%v\n", err)
-			continue
-		}
-
-		body, err := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil {
-			fmt.Printf("%v\n", err)
-			continue
-		}
-
-		writeMessage <- IRCMessage{parsed.channel, html.UnescapeString(matchTitle.FindAllStringSubmatch(string(body), -1)[0][1] + " uploaded by " +
-			matchUser.FindAllStringSubmatch(string(body), -1)[0][1]), parsed.user}
-	}
+	scrapeAndSend(event, func(msg *string) (*string, error) { return getFirstMatch(matchYouTube, msg) },
+		func(msg *IRCMessage, body *string) error {
+			title, err := getFirstMatch(matchTitle, body)
+			if err != nil {
+				return err
+			}
+			user, err := getFirstMatch(matchUser, body)
+			if err != nil {
+				return err
+			}
+			writeMessage <- IRCMessage{msg.channel, html.UnescapeString(*title + " uploaded by " + *user), msg.user}
+			return nil
+		})
 }
 
 func gelbooru(event chan unparsedMessage, writeMessage chan IRCMessage) {
