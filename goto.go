@@ -16,10 +16,10 @@ import (
 
 var user = ""
 
-var matchGelbooru = regexp.MustCompile(`\Qhttp://gelbooru.com/index.php?page=post&s=view&id=\E([\d]+)`)
-var matchYouTube = regexp.MustCompile(`(https?://(?:www\.|)youtu(?:\.be|be\.com)/[^ ]+)`)
-var matchAmiAmi = regexp.MustCompile(`(https?://(?:www\.|)amiami.com/[^/ ]+/detail/[^ ]+)`)
-var matchReddit = regexp.MustCompile(`(https?://(?:www\.|)redd(?:\.it|it\.com)/r/[^/ ]+/comments/[^/ ]+/?)(?: .*|\z)`)
+var matchGelbooru = regexp.MustCompile(`(?:https?://|)\Qgelbooru.com/index.php?page=post&s=view&id=\E([\d]+)`)
+var matchYouTube = regexp.MustCompile(`(?:https?://|)(?:www\.|)(youtu(?:\.be|be\.com)/[^ ]+)`)
+var matchAmiAmi = regexp.MustCompile(`(?:https?://|)(?:www\.|)amiami.com/([^/ ]+/detail/[^ ]+)`)
+var matchReddit = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(r/[^/ ]+/comments/[^/ ]+)/?(?: .*|\z)`)
 
 func auth(con *goty.IRCConn, writeMessage chan IRCMessage) {
 	var pswd string
@@ -202,7 +202,15 @@ func getFirstMatch(re *regexp.Regexp, matchee *string) (*string, error) {
 func amiami(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	matchTitle := regexp.MustCompile(`.*<meta property="og:title" content="(.+)" />.*`)
 	matchDiscount := regexp.MustCompile(`[0-9]+\%OFF `)
-	scrapeAndSend(event, func(msg *string) (*string, error) { return getFirstMatch(matchAmiAmi, msg) },
+	scrapeAndSend(event, func(msg *string) (*string, error) {
+		uri, err := getFirstMatch(matchAmiAmi, msg)
+		if err != nil {
+			return nil, err
+		}
+
+		fullUri := "http://amiami.com/" + *uri
+		return &fullUri, nil
+	},
 		func(msg *IRCMessage, body *string) error {
 			title, err := getFirstMatch(matchTitle, body)
 			if err != nil {
@@ -217,7 +225,15 @@ func amiami(event chan unparsedMessage, writeMessage chan IRCMessage) {
 func reddit(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	matchTitle := regexp.MustCompile(`.*<title>(.+)</title>.*`)
 
-	scrapeAndSend(event, func(msg *string) (*string, error) { return getFirstMatch(matchReddit, msg) },
+	scrapeAndSend(event, func(msg *string) (*string, error) {
+		uri, err := getFirstMatch(matchReddit, msg)
+		if err != nil {
+			return nil, err
+		}
+
+		fullUri := "http://reddit.com/" + *uri
+		return &fullUri, nil
+	},
 		func(msg *IRCMessage, body *string) error {
 			title, err := getFirstMatch(matchTitle, body)
 			if err != nil {
@@ -233,7 +249,15 @@ func youtube(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	matchTitle := regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
 	matchUser := regexp.MustCompile(`.*<a[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
 
-	scrapeAndSend(event, func(msg *string) (*string, error) { return getFirstMatch(matchYouTube, msg) },
+	scrapeAndSend(event, func(msg *string) (*string, error) {
+		uri, err := getFirstMatch(matchYouTube, msg)
+		if err != nil {
+			return nil, err
+		}
+
+		fullUri := "http://" + *uri
+		return &fullUri, nil
+	},
 		func(msg *IRCMessage, body *string) error {
 			title, err := getFirstMatch(matchTitle, body)
 			if err != nil {
