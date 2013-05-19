@@ -151,6 +151,7 @@ func scrapeAndSend(event chan unparsedMessage, findUri uriFunc, write writeFunc)
 	for msg := range event {
 		parsed, err := getMsgInfo(msg.msg)
 		if err != nil {
+			fmt.Printf("%v\n", err)
 			continue
 		}
 
@@ -174,6 +175,7 @@ func scrapeAndSend(event chan unparsedMessage, findUri uriFunc, write writeFunc)
 		body := string(bodyBytes)
 
 		if write(parsed, &body) != nil {
+			fmt.Printf("%v\n", err)
 			continue
 		}
 	}
