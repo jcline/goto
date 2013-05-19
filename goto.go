@@ -27,7 +27,7 @@ func auth(con *goty.IRCConn, writeMessage chan IRCMessage) {
 		os.Exit(1)
 	}
 
-	msg := IRCMessage{"NickServ", "IDENTIFY Laala " + pswd}
+	msg := IRCMessage{channel: "NickServ", msg: "IDENTIFY Laala " + pswd}
 	writeMessage <- msg
 }
 
@@ -83,6 +83,7 @@ type unparsedMessage struct {
 type IRCMessage struct {
 	channel string
 	msg     string
+	user    string
 }
 
 func message(con *goty.IRCConn, msg IRCMessage) {
@@ -90,20 +91,23 @@ func message(con *goty.IRCConn, msg IRCMessage) {
 }
 
 func messageHandler(con *goty.IRCConn, event chan IRCMessage) {
-	books := map[string]time.Time{}
+	allBooks := map[string]time.Time{}
+	chanBooks := map[string]time.Time{}
 	for msg := range event {
 		now := time.Now()
-		if now.Sub(books[msg.channel]) < time.Second*10 {
+		key := msg.channel + ":" + msg.user
+		if now.Sub(allBooks[key]) < time.Second*10 || now.Sub(chanBooks[key]) < time.Second*2 {
 			continue
 		}
-		books[msg.channel] = now
+		allBooks[key] = now
+		chanBooks[key] = now
 		message(con, msg)
 	}
 }
 
 var PRIVMSG = regexp.MustCompile(`:(.+)![^ ]+ PRIVMSG ([^ ]+) :(.*)`)
 
-func getChannel(msg string) (*IRCMessage, error) {
+func getMsgInfo(msg string) (*IRCMessage, error) {
 	// :nick!~realname@0.0.0.0 PRIVMSG #chan :msg
 	imsg := new(IRCMessage)
 	match := PRIVMSG.FindAllStringSubmatch(msg, -1)
@@ -113,6 +117,7 @@ func getChannel(msg string) (*IRCMessage, error) {
 	if len(match[0]) < 3 {
 		return imsg, errors.New("could not parse message")
 	}
+	imsg.user = user
 	imsg.channel = match[0][2]
 	if imsg.channel == user {
 		imsg.channel = match[0][1]
@@ -131,11 +136,11 @@ func bastille(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	}
 
 	for msg := range event {
-		parsed, err := getChannel(msg.msg)
+		parsed, err := getMsgInfo(msg.msg)
 		if err != nil {
 			continue
 		}
-		writeMessage <- IRCMessage{parsed.channel, msgs[rand.Intn(len(msgs))-1]}
+		writeMessage <- IRCMessage{parsed.channel, msgs[rand.Intn(len(msgs))-1], parsed.user}
 	}
 }
 
@@ -143,7 +148,7 @@ func amiami(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	matchTitle := regexp.MustCompile(`.*<meta property="og:title" content="(.+)" />.*`)
 	matchDiscount := regexp.MustCompile(`[0-9]+\%OFF `)
 	for msg := range event {
-		parsed, err := getChannel(msg.msg)
+		parsed, err := getMsgInfo(msg.msg)
 		if err != nil {
 			continue
 		}
@@ -161,7 +166,7 @@ func amiami(event chan unparsedMessage, writeMessage chan IRCMessage) {
 			continue
 		}
 
-		writeMessage <- IRCMessage{parsed.channel, matchDiscount.ReplaceAllLiteralString(matchTitle.FindAllStringSubmatch(string(body), -1)[0][1], "")}
+		writeMessage <- IRCMessage{parsed.channel, matchDiscount.ReplaceAllLiteralString(matchTitle.FindAllStringSubmatch(string(body), -1)[0][1], ""), parsed.user}
 	}
 }
 
@@ -169,7 +174,7 @@ func youtube(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	matchTitle := regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
 	matchUser := regexp.MustCompile(`.*<a[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
 	for msg := range event {
-		parsed, err := getChannel(msg.msg)
+		parsed, err := getMsgInfo(msg.msg)
 		if err != nil {
 			continue
 		}
@@ -188,7 +193,7 @@ func youtube(event chan unparsedMessage, writeMessage chan IRCMessage) {
 		}
 
 		writeMessage <- IRCMessage{parsed.channel, html.UnescapeString(matchTitle.FindAllStringSubmatch(string(body), -1)[0][1] + " uploaded by " +
-			matchUser.FindAllStringSubmatch(string(body), -1)[0][1])}
+			matchUser.FindAllStringSubmatch(string(body), -1)[0][1]), parsed.user}
 	}
 }
 
@@ -199,7 +204,7 @@ func gelbooru(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	}
 
 	for msg := range event {
-		parsed, err := getChannel(msg.msg)
+		parsed, err := getMsgInfo(msg.msg)
 		if err != nil {
 			continue
 		}
@@ -228,6 +233,6 @@ func gelbooru(event chan unparsedMessage, writeMessage chan IRCMessage) {
 		}
 
 		fmt.Printf("%s\n", result.tags)
-		writeMessage <- IRCMessage{parsed.channel, "tobedone"}
+		writeMessage <- IRCMessage{parsed.channel, "tobedone", parsed.user}
 	}
 }
