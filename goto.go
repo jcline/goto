@@ -160,6 +160,7 @@ func scrapeAndSend(event chan unparsedMessage, findUri uriFunc, write writeFunc)
 			fmt.Printf("%v\n", err)
 			continue
 		}
+
 		resp, err := http.Get(*uri)
 		if err != nil {
 			fmt.Printf("%v\n", err)
@@ -202,7 +203,7 @@ func amiami(event chan unparsedMessage, writeMessage chan IRCMessage) {
 				return err
 			}
 
-			writeMessage <- IRCMessage{msg.channel, matchDiscount.ReplaceAllLiteralString(*title, ""), msg.user}
+			writeMessage <- IRCMessage{msg.channel, "[AmiAmi]: " + matchDiscount.ReplaceAllLiteralString(*title, ""), msg.user}
 			return nil
 		})
 }
@@ -221,7 +222,7 @@ func youtube(event chan unparsedMessage, writeMessage chan IRCMessage) {
 			if err != nil {
 				return err
 			}
-			writeMessage <- IRCMessage{msg.channel, html.UnescapeString(*title + " uploaded by " + *user), msg.user}
+			writeMessage <- IRCMessage{msg.channel, "[YouTube]: " + html.UnescapeString(*title+" uploaded by "+*user), msg.user}
 			return nil
 		})
 }
