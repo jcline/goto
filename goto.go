@@ -16,9 +16,10 @@ import (
 
 var user = ""
 
-var matchGelbooru = regexp.MustCompile(`.*\Qhttp://gelbooru.com/index.php?page=post&s=view&id=\E([\d]+).*`)
-var matchYouTube = regexp.MustCompile(`.*(https?://(?:www\.|)youtu(?:\.be|be\.com)/[^ ]+).*`)
-var matchAmiAmi = regexp.MustCompile(`(https?://(?:www\.|)amiami.com/[^/]+/detail/.*)`)
+var matchGelbooru = regexp.MustCompile(`\Qhttp://gelbooru.com/index.php?page=post&s=view&id=\E([\d]+)`)
+var matchYouTube = regexp.MustCompile(`(https?://(?:www\.|)youtu(?:\.be|be\.com)/[^ ]+)`)
+var matchAmiAmi = regexp.MustCompile(`(https?://(?:www\.|)amiami.com/[^/ ]+/detail/[^ ]+)`)
+var matchReddit = regexp.MustCompile(`(https?://(?:www\.|)redd(?:\.it|it\.com)/r/[^/ ]+/comments/[^/ ]+/?)(?: .*|\z)`)
 
 func auth(con *goty.IRCConn, writeMessage chan IRCMessage) {
 	var pswd string
@@ -43,19 +44,22 @@ func main() {
 		fmt.Fprintf(os.Stderr, "err: %s\n", err.Error())
 	}
 
-	gelbooruEvent := make(chan unparsedMessage, 1000)
-	youtubeEvent := make(chan unparsedMessage, 1000)
+	writeMessage := make(chan IRCMessage, 1000)
+	go messageHandler(con, writeMessage)
+
 	amiAmiEvent := make(chan unparsedMessage, 1000)
 	bastilleEvent := make(chan unparsedMessage, 1000)
-	writeMessage := make(chan IRCMessage, 1000)
+	gelbooruEvent := make(chan unparsedMessage, 1000)
+	redditEvent := make(chan unparsedMessage, 1000)
+	youtubeEvent := make(chan unparsedMessage, 1000)
 
-	go messageHandler(con, writeMessage)
-	go gelbooru(gelbooruEvent, writeMessage)
-	go youtube(youtubeEvent, writeMessage)
 	go amiami(amiAmiEvent, writeMessage)
 	go bastille(bastilleEvent, writeMessage)
+	go gelbooru(gelbooruEvent, writeMessage)
+	go reddit(redditEvent, writeMessage)
+	go youtube(youtubeEvent, writeMessage)
 
-	auth(con, writeMessage)
+	//auth(con, writeMessage)
 	con.Write <- "JOIN " + args[4]
 
 	for msg := range con.Read {
@@ -63,12 +67,14 @@ func main() {
 		fmt.Printf("%s||%s\n", prepared.when, prepared.msg)
 
 		switch {
-		case matchGelbooru.MatchString(msg):
-			//gelbooruEvent <- matchGelbooru.FindAllStringSubmatch(msg, -1)[0][1]
-		case matchYouTube.MatchString(msg):
-			youtubeEvent <- prepared
 		case matchAmiAmi.MatchString(msg):
 			amiAmiEvent <- prepared
+		case matchGelbooru.MatchString(msg):
+			//gelbooruEvent <- matchGelbooru.FindAllStringSubmatch(msg, -1)[0][1]
+		case matchReddit.MatchString(msg):
+			redditEvent <- prepared
+		case matchYouTube.MatchString(msg):
+			youtubeEvent <- prepared
 		default:
 		}
 	}
@@ -204,6 +210,21 @@ func amiami(event chan unparsedMessage, writeMessage chan IRCMessage) {
 			}
 
 			writeMessage <- IRCMessage{msg.channel, "[AmiAmi]: " + matchDiscount.ReplaceAllLiteralString(*title, ""), msg.user}
+			return nil
+		})
+}
+
+func reddit(event chan unparsedMessage, writeMessage chan IRCMessage) {
+	matchTitle := regexp.MustCompile(`.*<title>(.+)</title>.*`)
+
+	scrapeAndSend(event, func(msg *string) (*string, error) { return getFirstMatch(matchReddit, msg) },
+		func(msg *IRCMessage, body *string) error {
+			title, err := getFirstMatch(matchTitle, body)
+			if err != nil {
+				return err
+			}
+
+			writeMessage <- IRCMessage{msg.channel, "[Reddit]: " + html.UnescapeString(*title), msg.user}
 			return nil
 		})
 }
