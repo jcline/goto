@@ -389,10 +389,12 @@ func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage, user st
 			fmt.Printf("%s\n", *body)
 			id, err := getFirstMatch(matchID, body)
 			if err != nil {
+				writeMessage <- IRCMessage{msg.channel, "┐('～`；)┌", msg.user}
 				return err
 			}
 			title, err := getFirstMatch(matchTitle, body)
 			if err != nil {
+				writeMessage <- IRCMessage{msg.channel, "┐('～`；)┌", msg.user}
 				return err
 			}
 			writeMessage <- IRCMessage{msg.channel, *title + ": http://myanimelist.net/anime/" + *id, msg.user}
