@@ -11,25 +11,37 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 )
 
 var user = ""
 
-var matchGelbooru = regexp.MustCompile(`(?:https?://|)\Qgelbooru.com/index.php?page=post&s=view&id=\E([\d]+)`)
-var matchYouTube = regexp.MustCompile(`(?:https?://|)(?:www\.|)(youtu(?:\.be|be\.com)/[^ ]+)`)
+var matchAniDBSearch = regexp.MustCompile(`!anidb +(.+) *`)
 var matchAmiAmi = regexp.MustCompile(`(?:https?://|)(?:www\.|)amiami.com/([^/ ]+/detail/[^ ]+)`)
+var matchGelbooru = regexp.MustCompile(`(?:https?://|)\Qgelbooru.com/index.php?page=post&s=view&id=\E([\d]+)`)
+var matchMAL = regexp.MustCompile(`!anime+(.+) *`)
 var matchReddit = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(r/[^/ ]+/comments/[^/ ]+)/?(?: .*|\z)`)
+var matchYouTube = regexp.MustCompile(`(?:https?://|)(?:www\.|)(youtu(?:\.be|be\.com)/[^ ]+)`)
 
-func auth(con *goty.IRCConn, writeMessage chan IRCMessage) {
+func auth(con *goty.IRCConn, writeMessage chan IRCMessage, user string) {
 	var pswd string
+	fmt.Printf("Password for NickServ:\n")
 	_, err := fmt.Scanf("%s", &pswd)
 	if err != nil {
 		os.Exit(1)
 	}
 
-	msg := IRCMessage{channel: "NickServ", msg: "IDENTIFY Laala " + pswd}
+	msg := IRCMessage{channel: "NickServ", msg: "IDENTIFY " + user + " " + pswd}
 	writeMessage <- msg
+}
+
+func malAuth() (user string, pswd string, err error) {
+	fmt.Printf("User for MAL:\n")
+	_, err = fmt.Scanf("%s", &user)
+	fmt.Printf("Password for MAL:\n")
+	_, err = fmt.Scanf("%s", &pswd)
+	return
 }
 
 func main() {
@@ -44,22 +56,28 @@ func main() {
 		fmt.Fprintf(os.Stderr, "err: %s\n", err.Error())
 	}
 
+	malUser, malPswd, err := malAuth()
+
 	writeMessage := make(chan IRCMessage, 1000)
 	go messageHandler(con, writeMessage)
 
 	amiAmiEvent := make(chan unparsedMessage, 1000)
+	//anidbEvent := make(chan unparsedMessage, 1000)
 	bastilleEvent := make(chan unparsedMessage, 1000)
 	gelbooruEvent := make(chan unparsedMessage, 1000)
+	malEvent := make(chan unparsedMessage, 1000)
 	redditEvent := make(chan unparsedMessage, 1000)
 	youtubeEvent := make(chan unparsedMessage, 1000)
 
 	go amiami(amiAmiEvent, writeMessage)
+	//go anidb(anidbEvent, writeMessage)
 	go bastille(bastilleEvent, writeMessage)
 	go gelbooru(gelbooruEvent, writeMessage)
+	go malSearch(malEvent, writeMessage, malUser, malPswd)
 	go reddit(redditEvent, writeMessage)
 	go youtube(youtubeEvent, writeMessage)
 
-	auth(con, writeMessage)
+	auth(con, writeMessage, user)
 	con.Write <- "JOIN " + args[4]
 
 	for msg := range con.Read {
@@ -67,14 +85,18 @@ func main() {
 		fmt.Printf("%s||%s\n", prepared.when, prepared.msg)
 
 		switch {
-		case matchAmiAmi.MatchString(msg):
+		case matchAmiAmi.MatchString(prepared.msg):
 			amiAmiEvent <- prepared
-		case matchGelbooru.MatchString(msg):
-			//gelbooruEvent <- matchGelbooru.FindAllStringSubmatch(msg, -1)[0][1]
-		case matchReddit.MatchString(msg):
+		case matchGelbooru.MatchString(prepared.msg):
+			//gelbooruEvent <- matchGelbooru.FindAllStringSubmatch(prepared.msg, -1)[0][1]
+		case matchMAL.MatchString(prepared.msg):
+			malEvent <- prepared
+		case matchReddit.MatchString(prepared.msg):
 			redditEvent <- prepared
-		case matchYouTube.MatchString(msg):
+		case matchYouTube.MatchString(prepared.msg):
 			youtubeEvent <- prepared
+		//case matchAniDBSearch.MatchString(prepared.msg):
+		//anidbEvent <- prepared
 		default:
 		}
 	}
@@ -152,6 +174,7 @@ func bastille(event chan unparsedMessage, writeMessage chan IRCMessage) {
 
 type uriFunc func(*string) (*string, error)
 type writeFunc func(*IRCMessage, *string) error
+type errFunc func(*IRCMessage, error) error
 
 func scrapeAndSend(event chan unparsedMessage, findUri uriFunc, write writeFunc) {
 	for msg := range event {
@@ -181,7 +204,8 @@ func scrapeAndSend(event chan unparsedMessage, findUri uriFunc, write writeFunc)
 		}
 		body := string(bodyBytes)
 
-		if write(parsed, &body) != nil {
+		err = write(parsed, &body)
+		if err != nil {
 			fmt.Printf("%v\n", err)
 			continue
 		}
@@ -310,4 +334,63 @@ func gelbooru(event chan unparsedMessage, writeMessage chan IRCMessage) {
 		fmt.Printf("%s\n", result.tags)
 		writeMessage <- IRCMessage{parsed.channel, "tobedone", parsed.user}
 	}
+}
+
+func anidb(event chan unparsedMessage, writeMessage chan IRCMessage) {
+	cache := make(map[string]string)
+
+	for msg := range event {
+		parsed, err := getMsgInfo(msg.msg)
+		if err != nil {
+			continue
+		}
+
+		val, ok := cache[msg.msg]
+		if ok {
+			writeMessage <- IRCMessage{parsed.channel, val, parsed.user}
+		} else {
+			// totally broken :(
+			resp, err := http.Get("http://anisearch.outrance.pl/index.php?task=search&query=" + msg.msg)
+			if err != nil {
+				fmt.Printf("%v\n", err)
+				continue
+			}
+
+			body, err := ioutil.ReadAll(resp.Body)
+			resp.Body.Close()
+			if err != nil {
+				fmt.Printf("%v\n", err)
+				continue
+			}
+
+			fmt.Printf("%s\n", body)
+
+			//cache[msg.msg] = ""
+		}
+	}
+}
+
+func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage, user string, pswd string) {
+	matchID := regexp.MustCompile(`.*<id>([0-9]+)</id>.*`)
+	matchTitle := regexp.MustCompile(`.*<title>(.+)</title>.*`)
+	scrapeAndSend(event, func(msg *string) (*string, error) {
+		terms, err := getFirstMatch(matchMAL, msg)
+		if err != nil {
+			return nil, err
+		}
+		uri := "http://" + user + ":" + pswd + "@myanimelist.net/api/anime/search.xml?q=" + strings.Replace(*terms, " ", "+", -1)
+		return &uri, nil
+	},
+		func(msg *IRCMessage, body *string) error {
+			id, err := getFirstMatch(matchID, body)
+			if err != nil {
+				return err
+			}
+			title, err := getFirstMatch(matchTitle, body)
+			if err != nil {
+				return err
+			}
+			writeMessage <- IRCMessage{msg.channel, *title + ": http://myanimelist.net/anime/" + *id, msg.user}
+			return nil
+		})
 }
