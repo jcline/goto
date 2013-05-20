@@ -20,7 +20,7 @@ var user = ""
 var matchAniDBSearch = regexp.MustCompile(`!anidb +(.+) *`)
 var matchAmiAmi = regexp.MustCompile(`(?:https?://|)(?:www\.|)amiami.com/([^/ ]+/detail/[^ ]+)`)
 var matchGelbooru = regexp.MustCompile(`(?:https?://|)\Qgelbooru.com/index.php?page=post&s=view&id=\E([\d]+)`)
-var matchMAL = regexp.MustCompile(`!anime+(.+) *`)
+var matchMAL = regexp.MustCompile(`!anime+(.+)`)
 var matchReddit = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(r/[^/ ]+/comments/[^/ ]+)/?(?: .*|\z)`)
 var matchYouTube = regexp.MustCompile(`(?:https?://|)(?:www\.|)(youtu(?:\.be|be\.com)/[^ ]+)`)
 
@@ -382,6 +382,11 @@ func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage, user st
 		return &uri, nil
 	},
 		func(msg *IRCMessage, body *string) error {
+			if len(*body) < 10 {
+				writeMessage <- IRCMessage{msg.channel, "┐('～`；)┌", msg.user}
+				return errors.New("No results")
+			}
+			fmt.Printf("%s\n", *body)
 			id, err := getFirstMatch(matchID, body)
 			if err != nil {
 				return err
