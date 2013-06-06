@@ -31,19 +31,11 @@ func auth(con *goty.IRCConn, writeMessage chan IRCMessage, user string) {
 	fmt.Printf("Password for NickServ:\n")
 	_, err := fmt.Scanf("%s", &pswd)
 	if err != nil {
-		os.Exit(1)
+		return
 	}
 
 	msg := IRCMessage{channel: "NickServ", msg: "IDENTIFY " + user + " " + pswd}
 	writeMessage <- msg
-}
-
-func malAuth() (user string, pswd string, err error) {
-	fmt.Printf("User for MAL:\n")
-	_, err = fmt.Scanf("%s", &user)
-	fmt.Printf("Password for MAL:\n")
-	_, err = fmt.Scanf("%s", &pswd)
-	return
 }
 
 func main() {
@@ -57,8 +49,6 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "err: %s\n", err.Error())
 	}
-
-	malUser, malPswd, err := malAuth()
 
 	writeMessage := make(chan IRCMessage, 1000)
 	go messageHandler(con, writeMessage)
@@ -75,11 +65,11 @@ func main() {
 	//go anidb(anidbEvent, writeMessage)
 	go bastille(bastilleEvent, writeMessage)
 	go gelbooru(gelbooruEvent, writeMessage)
-	go malSearch(malEvent, writeMessage, malUser, malPswd)
+	go malSearch(malEvent, writeMessage)
 	go reddit(redditEvent, writeMessage)
 	go youtube(youtubeEvent, writeMessage)
 
-	//auth(con, writeMessage, user)
+	auth(con, writeMessage, user)
 	con.Write <- "JOIN " + args[4]
 
 	for msg := range con.Read {
@@ -372,11 +362,12 @@ func anidb(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	}
 }
 
-func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage, user string, pswd string) {
+func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage) {
 
 	type Anime struct {
 		Id int
 		Title string
+		Classification string
 	}
 
 	scrapeAndSend(event, func(msg *string) (*string, error) {
@@ -393,6 +384,8 @@ func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage, user st
 				return errors.New("No results")
 			}
 
+			fmt.Printf("%v\n", *body)
+
 			var a []Anime
 			err := json.Unmarshal([]byte(*body), &a)
 			if err != nil {
@@ -403,10 +396,18 @@ func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage, user st
 
 			var results = ""
 			var count = 0
+			var nsfw = false
 
-			for count < len(a) {
-				results += a[count].Title + ": http://myanimelist.net/anime/" + strconv.Itoa(a[count].Id) + "  "
+			for count < len(a) && count < 3 {
+				results += a[count].Title + " [Rating: " + a[count].Classification + "]: http://myanimelist.net/anime/" + strconv.Itoa(a[count].Id) + "  "
+				if a[count].Classification == "Rx" {
+					nsfw = true
+				}
 				count = count + 1
+			}
+
+			if nsfw {
+				results += "NSFW"
 			}
 
 			writeMessage <- IRCMessage{msg.channel, results, msg.user}
