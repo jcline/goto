@@ -169,38 +169,42 @@ type writeFunc func(*IRCMessage, *string) error
 type errFunc func(*IRCMessage, error) error
 
 func scrapeAndSend(event chan unparsedMessage, findUri uriFunc, write writeFunc) {
-	for msg := range event {
+	var f = func(msg unparsedMessage) {
 		parsed, err := getMsgInfo(msg.msg)
 		if err != nil {
 			fmt.Printf("%v\n", err)
-			continue
+			return
 		}
 
 		uri, err := findUri(&parsed.msg)
 		if err != nil {
 			fmt.Printf("%v\n", err)
-			continue
+			return
 		}
 
 		resp, err := http.Get(*uri)
 		if err != nil {
 			fmt.Printf("%v\n", err)
-			continue
+			return
 		}
 
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
 			fmt.Printf("%v\n", err)
-			continue
+			return
 		}
 		body := string(bodyBytes)
 
 		err = write(parsed, &body)
 		if err != nil {
 			fmt.Printf("%v\n", err)
-			continue
+			return
 		}
+	}
+
+	for msg := range event {
+		go f(msg)
 	}
 }
 
