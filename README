@@ -10,8 +10,10 @@ Usage:
 	goto "irc.freenode.net:6666" username realname "#somechannel"
 
 Features:
-	Gets YouTube titles for links pasted in channel
+	Gets YouTube titles and user for links pasted in channel
 	Gets AmiAmi titles for links pasted in channel
+	MAL anime search with ratings and NSFW tag
+	reddit short uri title scraping
 	Private message support
 	Rate limited (1msg/10s/channel and private message by default)
 	
