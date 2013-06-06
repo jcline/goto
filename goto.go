@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"encoding/xml" // gelbooru parsing
 	"errors"
 	"fmt"
@@ -9,9 +10,10 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
-	"strings"
+	"strconv"
 	"time"
 )
 
@@ -77,7 +79,7 @@ func main() {
 	go reddit(redditEvent, writeMessage)
 	go youtube(youtubeEvent, writeMessage)
 
-	auth(con, writeMessage, user)
+	//auth(con, writeMessage, user)
 	con.Write <- "JOIN " + args[4]
 
 	for msg := range con.Read {
@@ -371,14 +373,18 @@ func anidb(event chan unparsedMessage, writeMessage chan IRCMessage) {
 }
 
 func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage, user string, pswd string) {
-	matchID := regexp.MustCompile(`.*<id>([0-9]+)</id>.*`)
-	matchTitle := regexp.MustCompile(`.*<title>(.+)</title>.*`)
+
+	type Anime struct {
+		Id int
+		Title string
+	}
+
 	scrapeAndSend(event, func(msg *string) (*string, error) {
 		terms, err := getFirstMatch(matchMAL, msg)
 		if err != nil {
 			return nil, err
 		}
-		uri := "http://" + user + ":" + pswd + "@myanimelist.net/api/anime/search.xml?q=" + strings.Replace(*terms, " ", "+", -1)
+		uri := "http://mal-api.com/anime/search?q=" + url.QueryEscape(*terms)
 		return &uri, nil
 	},
 		func(msg *IRCMessage, body *string) error {
@@ -386,18 +392,24 @@ func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage, user st
 				writeMessage <- IRCMessage{msg.channel, "┐('～`；)┌", msg.user}
 				return errors.New("No results")
 			}
-			fmt.Printf("%s\n", *body)
-			id, err := getFirstMatch(matchID, body)
+
+			var a []Anime
+			err := json.Unmarshal([]byte(*body), &a)
 			if err != nil {
 				writeMessage <- IRCMessage{msg.channel, "┐('～`；)┌", msg.user}
 				return err
 			}
-			title, err := getFirstMatch(matchTitle, body)
-			if err != nil {
-				writeMessage <- IRCMessage{msg.channel, "┐('～`；)┌", msg.user}
-				return err
+			fmt.Printf("%v\n", a)
+
+			var results = ""
+			var count = 0
+
+			for count < len(a) {
+				results += a[count].Title + ": http://myanimelist.net/anime/" + strconv.Itoa(a[count].Id) + "  "
+				count = count + 1
 			}
-			writeMessage <- IRCMessage{msg.channel, *title + ": http://myanimelist.net/anime/" + *id, msg.user}
+
+			writeMessage <- IRCMessage{msg.channel, results, msg.user}
 			return nil
 		})
 }
