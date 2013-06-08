@@ -12,7 +12,7 @@ Usage:
 Configuration:
 	On the first invocation of goto, you will be prompted for configuration.
 	The config file is the Settings struct serialized to JSON.
-	By default, it is stored in $XDG_CONFIG_HOME/conf, or ~/.config/goto/conf if that doesn't exist.
+	By default, it is stored in $XDG_CONFIG_HOME/goto/conf, or ~/.config/goto/conf if that doesn't exist.
 
 Features:
 	Gets YouTube titles and user for links pasted in channel
