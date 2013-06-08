@@ -8,12 +8,15 @@ import (
 	"github.com/jcline/goty"
 	"html"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -38,16 +41,171 @@ func auth(con *goty.IRCConn, writeMessage chan IRCMessage, user string) {
 	writeMessage <- msg
 }
 
-func main() {
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, ErrConfNotFound
+	}
+	return false, err
+}
+
+type Settings struct {
+	Server   string   `json:"server"`
+	UserName string   `json:"userName"`
+	RealName string   `json:"realName"`
+	Channels []string `json:"channels"`
+}
+
+var ErrConfNotFound = errors.New("Conf does not exist")
+
+func readConfig() (conf Settings, path string, err error) {
 	args := os.Args
-	if len(args) < 4 {
-		os.Exit(1)
+	path = ""
+	if len(args) == 2 {
+		path = filepath.Clean(args[1])
+	} else {
+		path = os.Getenv("XDG_CONFIG_HOME")
+		if path == "" {
+			path = filepath.Join("$HOME", ".config", "goto", "conf")
+		} else {
+			path = filepath.Join(path, "goto", "conf")
+		}
 	}
 
-	con, err := goty.Dial(args[1], args[2], args[3])
-	user = args[2]
+	path, err = filepath.Abs(os.ExpandEnv(path))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "err: %s\n", err.Error())
+		return
+	}
+
+	log.Println(path)
+
+	_, err = exists(path)
+	if err != nil {
+		return
+	}
+
+	file, err := ioutil.ReadFile(path)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(file, &conf)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func createConfig(path string) (conf Settings, err error) {
+
+	_, err = exists(path)
+	log.Println(exists, err)
+	if err == ErrConfNotFound {
+		err = os.MkdirAll(filepath.Dir(path), 0644)
+		log.Println(path, ":", filepath.Dir(path))
+		if err != nil && !os.IsPermission(err) {
+			return
+		}
+	}
+
+	for {
+		log.Println("Server (e.g. irc.freenode.net:6666):")
+		_, err = fmt.Scanf("%s", &conf.Server)
+		if err != nil {
+			return
+		}
+		if !strings.Contains(conf.Server, ":") {
+			log.Println("You must include a port.")
+		} else {
+			break
+		}
+	}
+
+	for {
+		log.Println("User name:")
+		_, err = fmt.Scanf("%s", &conf.UserName)
+		if err != nil {
+			return
+		}
+		if conf.UserName == "" {
+			log.Println("User name must not be empty")
+		} else {
+			break
+		}
+	}
+
+	for {
+		log.Println("Real name:")
+		_, err = fmt.Scanf("%s", &conf.RealName)
+		if err != nil {
+			return
+		}
+		if conf.RealName == "" {
+			log.Println("Real name must not be empty")
+		} else {
+			break
+		}
+	}
+
+	for {
+		log.Println("Channels to join (e.g. #chan1,#chan2 or #chan1):")
+		var channels string
+		_, err = fmt.Scanf("%s", &channels)
+		if err != nil {
+			return
+		}
+		if channels == "" || !strings.Contains(channels, "#") {
+			log.Println("You must provide at least one channel")
+		} else {
+			conf.Channels = strings.Split(channels, ",")
+			break
+		}
+	}
+
+	js, err := json.Marshal(conf)
+	if err != nil {
+		return
+	}
+
+	log.Println("Writing to: ", path)
+	err = ioutil.WriteFile(path, js, 0644)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func main() {
+	conf, path, err := readConfig()
+	if err != nil {
+		if err == ErrConfNotFound {
+			log.Println("Could not read config, would you like to create one? [y/n]")
+			var response string
+			_, err := fmt.Scanf("%s", &response)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if response == "y" || response == "Y" {
+				conf, err = createConfig(path)
+				if err != nil {
+					log.Fatal(err)
+				}
+			} else {
+				log.Fatal("I can't do anything without config.")
+			}
+		} else {
+			log.Fatal(err)
+		}
+	}
+
+	con, err := goty.Dial(conf.Server, conf.UserName, conf.RealName)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	writeMessage := make(chan IRCMessage, 1000)
@@ -69,8 +227,10 @@ func main() {
 	go reddit(redditEvent, writeMessage)
 	go youtube(youtubeEvent, writeMessage)
 
-	auth(con, writeMessage, user)
-	con.Write <- "JOIN " + args[4]
+	auth(con, writeMessage, conf.UserName)
+	for _, channel := range conf.Channels {
+		con.Write <- "JOIN " + channel
+	}
 
 	for msg := range con.Read {
 		prepared := unparsedMessage{msg, time.Now()}

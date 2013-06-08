@@ -7,7 +7,12 @@ Requirements:
 	goty (my fork: https://github.com/jcline/goty)
 
 Usage:
-	goto "irc.freenode.net:6666" username realname "#somechannel"
+	goto [config]
+
+Configuration:
+	On the first invocation of goto, you will be prompted for configuration.
+	The config file is the Settings struct serialized to JSON.
+	By default, it is stored in $XDG_CONFIG_HOME/conf, or ~/.config/goto/conf if that doesn't exist.
 
 Features:
 	Gets YouTube titles and user for links pasted in channel
@@ -24,7 +29,6 @@ In Progress:
 Planned:
 	Other booru tags?
 	More generic way to add features
-	Config file
 	Multi channel support
 	reddit API silliness
 
