@@ -189,7 +189,7 @@ func scrapeAndSend(event chan unparsedMessage, findUri uriFunc, write writeFunc)
 		}
 
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
+		defer resp.Body.Close()
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			return
@@ -237,7 +237,7 @@ func amiami(event chan unparsedMessage, writeMessage chan IRCMessage) {
 				return err
 			}
 
-			writeMessage <- IRCMessage{msg.channel, "[AmiAmi]: " + matchDiscount.ReplaceAllLiteralString(*title, ""), msg.user}
+			writeMessage <- IRCMessage{msg.channel, "[AmiAmi] " + matchDiscount.ReplaceAllLiteralString(*title, ""), msg.user}
 			return nil
 		})
 }
@@ -260,7 +260,7 @@ func reddit(event chan unparsedMessage, writeMessage chan IRCMessage) {
 				return err
 			}
 
-			writeMessage <- IRCMessage{msg.channel, "[Reddit]: " + html.UnescapeString(*title), msg.user}
+			writeMessage <- IRCMessage{msg.channel, "[Reddit] " + html.UnescapeString(*title), msg.user}
 			return nil
 		})
 }
@@ -287,7 +287,7 @@ func youtube(event chan unparsedMessage, writeMessage chan IRCMessage) {
 			if err != nil {
 				return err
 			}
-			writeMessage <- IRCMessage{msg.channel, "[YouTube]: " + html.UnescapeString(*title+" uploaded by "+*user), msg.user}
+			writeMessage <- IRCMessage{msg.channel, "[YouTube] " + html.UnescapeString(*title+" uploaded by "+*user), msg.user}
 			return nil
 		})
 }
@@ -369,8 +369,8 @@ func anidb(event chan unparsedMessage, writeMessage chan IRCMessage) {
 func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage) {
 
 	type Anime struct {
-		Id int
-		Title string
+		Id             int
+		Title          string
 		Classification string
 	}
 
@@ -403,8 +403,8 @@ func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage) {
 			var nsfw = false
 
 			for count < len(a) && count < 3 {
-				results += a[count].Title + " [Rating: " + a[count].Classification + "]: http://myanimelist.net/anime/" + strconv.Itoa(a[count].Id) + "  "
-				if a[count].Classification == "Rx" {
+				results += a[count].Title + " [Rating " + a[count].Classification + "] http://myanimelist.net/anime/" + strconv.Itoa(a[count].Id) + "  "
+				if a[count].Classification == "Rx" || a[count].Classification == "R+" {
 					nsfw = true
 				}
 				count = count + 1
