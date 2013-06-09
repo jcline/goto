@@ -23,11 +23,11 @@ import (
 var user = ""
 
 var matchAniDBSearch = regexp.MustCompile(`!anidb +(.+) *`)
-var matchAmiAmi = regexp.MustCompile(`(?:https?://|)(?:www\.|)amiami.com/([^/ ]+/detail/[^ ]+)`)
+var matchAmiAmi = regexp.MustCompile(`(?:https?://|)(?:www\.|)amiami.com/((?:[^/]|\S)+/detail/\S+)`)
 var matchGelbooru = regexp.MustCompile(`(?:https?://|)\Qgelbooru.com/index.php?page=post&s=view&id=\E([\d]+)`)
-var matchMAL = regexp.MustCompile(`!anime+(.+)`)
-var matchReddit = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(r/[^/ ]+/comments/[^/ ]+)/?(?: .*|\z)`)
-var matchYouTube = regexp.MustCompile(`(?:https?://|)(?:www\.|)(youtu(?:\.be|be\.com)/[^ ]+)`)
+var matchMAL = regexp.MustCompile(`!anime (.+)`)
+var matchReddit = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(?:r/(?:[^/ ]|\S)+/comments/|)([a-z0-9]{6})/?`)
+var matchYouTube = regexp.MustCompile(`(?:https?://|)(?:www\.|)(youtu(?:\.be|be\.com)/\S+)`)
 
 func auth(con *goty.IRCConn, writeMessage chan IRCMessage, user string) {
 	var pswd string
@@ -332,33 +332,33 @@ func scrapeAndSend(event chan unparsedMessage, findUri uriFunc, write writeFunc)
 	var f = func(msg unparsedMessage) {
 		parsed, err := getMsgInfo(msg.msg)
 		if err != nil {
-			fmt.Printf("%v\n", err)
+			log.Println(err)
 			return
 		}
 
 		uri, err := findUri(&parsed.msg)
 		if err != nil {
-			fmt.Printf("%v\n", err)
+			log.Println(err)
 			return
 		}
 
 		resp, err := http.Get(*uri)
 		if err != nil {
-			fmt.Printf("%v\n", err)
+			log.Println(err)
 			return
 		}
 
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		defer resp.Body.Close()
 		if err != nil {
-			fmt.Printf("%v\n", err)
+			log.Println(err)
 			return
 		}
 		body := string(bodyBytes)
 
 		err = write(parsed, &body)
 		if err != nil {
-			fmt.Printf("%v\n", err)
+			log.Println(err)
 			return
 		}
 	}
@@ -420,7 +420,12 @@ func reddit(event chan unparsedMessage, writeMessage chan IRCMessage) {
 				return err
 			}
 
-			writeMessage <- IRCMessage{msg.channel, "[Reddit] " + html.UnescapeString(*title), msg.user}
+			cleanTitle := html.UnescapeString(*title)
+			if cleanTitle != "reddit.com: page not found" {
+				writeMessage <- IRCMessage{msg.channel, "[Reddit] " + cleanTitle, msg.user}
+			} else {
+				return errors.New("Page not found")
+			}
 			return nil
 		})
 }
