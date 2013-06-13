@@ -5,6 +5,7 @@ A simple IRC bot using goty (go troll yourself, https://github.com/RecursiveFore
 Requirements:
 	go
 	goty (my fork: https://github.com/jcline/goty)
+	DamerauLevenshteinDistance (https://github.com/jcline/DamerauLevenshteinDistance)
 
 Usage:
 	goto [config]
@@ -17,7 +18,7 @@ Configuration:
 Features:
 	Gets YouTube titles and user for links pasted in channel
 	Gets AmiAmi titles for links pasted in channel
-	MAL anime search with ratings and NSFW tag
+	MAL anime search with ratings and NSFW tag, sorted by Damerau-Levenshtein distance of results and search terms
 	reddit short uri title scraping
 	Private message support
 	Rate limited (1msg/10s/channel and private message by default)
