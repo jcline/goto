@@ -5,6 +5,7 @@ import (
 	"encoding/xml" // gelbooru parsing
 	"errors"
 	"fmt"
+	"github.com/jcline/DamerauLevenshteinDistance"
 	"github.com/jcline/goty"
 	"html"
 	"io/ioutil"
@@ -15,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -25,8 +27,9 @@ var user = ""
 var matchAniDBSearch = regexp.MustCompile(`!anidb +(.+) *`)
 var matchAmiAmi = regexp.MustCompile(`(?:https?://|)(?:www\.|)amiami.com/((?:[^/]|\S)+/detail/\S+)`)
 var matchGelbooru = regexp.MustCompile(`(?:https?://|)\Qgelbooru.com/index.php?page=post&s=view&id=\E([\d]+)`)
-var matchMAL = regexp.MustCompile(`!anime (.+)`)
-var matchReddit = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(?:r/(?:[^/ ]|\S)+/comments/|)([a-z0-9]{6})/?`)
+var matchMALAnime = regexp.MustCompile(`!anime (.+)`)
+var matchMALManga = regexp.MustCompile(`!manga (.+)`)
+var matchReddit = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(?:r/(?:[^/ ]|\S)+/comments/|)([a-z0-9]{6})/?(?:[ .]+|\z)`)
 var matchYouTube = regexp.MustCompile(`(?:https?://|)(?:www\.|)(youtu(?:\.be|be\.com)/\S+)`)
 
 func auth(con *goty.IRCConn, writeMessage chan IRCMessage, user string) {
@@ -215,7 +218,8 @@ func main() {
 	//anidbEvent := make(chan unparsedMessage, 1000)
 	bastilleEvent := make(chan unparsedMessage, 1000)
 	gelbooruEvent := make(chan unparsedMessage, 1000)
-	malEvent := make(chan unparsedMessage, 1000)
+	animeEvent := make(chan unparsedMessage, 1000)
+	mangaEvent := make(chan unparsedMessage, 1000)
 	redditEvent := make(chan unparsedMessage, 1000)
 	youtubeEvent := make(chan unparsedMessage, 1000)
 
@@ -223,7 +227,8 @@ func main() {
 	//go anidb(anidbEvent, writeMessage)
 	go bastille(bastilleEvent, writeMessage)
 	go gelbooru(gelbooruEvent, writeMessage)
-	go malSearch(malEvent, writeMessage)
+	go malSearch(animeEvent, "anime", writeMessage, matchMALAnime)
+	go malSearch(mangaEvent, "manga", writeMessage, matchMALManga)
 	go reddit(redditEvent, writeMessage)
 	go youtube(youtubeEvent, writeMessage)
 
@@ -241,8 +246,10 @@ func main() {
 			amiAmiEvent <- prepared
 		case matchGelbooru.MatchString(prepared.msg):
 			//gelbooruEvent <- matchGelbooru.FindAllStringSubmatch(prepared.msg, -1)[0][1]
-		case matchMAL.MatchString(prepared.msg):
-			malEvent <- prepared
+		case matchMALAnime.MatchString(prepared.msg):
+			animeEvent <- prepared
+		case matchMALManga.MatchString(prepared.msg):
+			mangaEvent <- prepared
 		case matchReddit.MatchString(prepared.msg):
 			redditEvent <- prepared
 		case matchYouTube.MatchString(prepared.msg):
@@ -531,20 +538,44 @@ func anidb(event chan unparsedMessage, writeMessage chan IRCMessage) {
 	}
 }
 
-func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage) {
+type Results []Result
+type Result struct {
+	Id             int
+	Title          string
+	Classification string
+	search         string
+	computed       bool
+	distance       int
+}
 
-	type Anime struct {
-		Id             int
-		Title          string
-		Classification string
+func (r Results) Len() int {
+	return len(r)
+}
+
+func (r Results) Swap(i, j int) {
+	r[i], r[j] = r[j], r[i]
+}
+
+func (r Results) Less(i, j int) bool {
+	if !r[i].computed {
+		r[i].distance = DamerauLevenshteinDistance.Distance(r[i].search, r[i].Title)
+		r[i].computed = true
+	}
+	if !r[j].computed {
+		r[j].distance = DamerauLevenshteinDistance.Distance(r[j].search, r[j].Title)
+		r[j].computed = true
 	}
 
+	return r[i].distance < r[j].distance
+}
+
+func malSearch(event chan unparsedMessage, searchType string, writeMessage chan IRCMessage, match *regexp.Regexp) {
 	scrapeAndSend(event, func(msg *string) (*string, error) {
-		terms, err := getFirstMatch(matchMAL, msg)
+		terms, err := getFirstMatch(match, msg)
 		if err != nil {
 			return nil, err
 		}
-		uri := "http://mal-api.com/anime/search?q=" + url.QueryEscape(*terms)
+		uri := "http://mal-api.com/" + searchType + "/search?q=" + url.QueryEscape(*terms)
 		return &uri, nil
 	},
 		func(msg *IRCMessage, body *string) error {
@@ -553,26 +584,46 @@ func malSearch(event chan unparsedMessage, writeMessage chan IRCMessage) {
 				return errors.New("No results")
 			}
 
-			fmt.Printf("%v\n", *body)
-
-			var a []Anime
-			err := json.Unmarshal([]byte(*body), &a)
+			var r Results
+			err := json.Unmarshal([]byte(*body), &r)
 			if err != nil {
 				writeMessage <- IRCMessage{msg.channel, "┐('～`；)┌", msg.user}
 				return err
 			}
-			fmt.Printf("%v\n", a)
+			fmt.Printf("%v\n", r)
 
 			var results = ""
-			var count = 0
 			var nsfw = false
+			reference, _ := getFirstMatch(match, &msg.msg)
 
-			for count < len(a) && count < 3 {
-				results += a[count].Title + " [Rating " + a[count].Classification + "] http://myanimelist.net/anime/" + strconv.Itoa(a[count].Id) + "  "
-				if a[count].Classification == "Rx" || a[count].Classification == "R+" {
+			for i, _ := range r {
+				r[i].Title = html.UnescapeString(r[i].Title)
+				r[i].search = *reference
+				r[i].computed = false
+			}
+			sort.Sort(r)
+
+			length := 3
+			if len(r) < length {
+				length = len(r)
+			}
+			for count, result := range r {
+				if searchType == "anime" {
+					class := result.Classification
+					if class != "" {
+						class = " [Rating " + class + "]"
+					} else {
+						nsfw = true
+					}
+
+					results += result.Title + class + " http://myanimelist.net/" + searchType + "/" + strconv.Itoa(result.Id) + "  "
+				} else {
+					results += result.Title + " http://myanimelist.net/" + searchType + "/" + strconv.Itoa(result.Id) + "  "
 					nsfw = true
 				}
-				count = count + 1
+				if count >= length {
+					break
+				}
 			}
 
 			if nsfw {
