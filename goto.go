@@ -24,6 +24,8 @@ import (
 
 var user = ""
 
+var matchHelp = regexp.MustCompile(`^help`)
+var matchHelpTerms = regexp.MustCompile(`^help (.+)`)
 var matchAniDBSearch = regexp.MustCompile(`!anidb +(.+) *`)
 var matchAmiAmi = regexp.MustCompile(`(?:https?://|)(?:www\.|)amiami.com/((?:[^/]|\S)+/detail/\S+)`)
 var matchGelbooru = regexp.MustCompile(`(?:https?://|)\Qgelbooru.com/index.php?page=post&s=view&id=\E([\d]+)`)
@@ -225,6 +227,7 @@ func main() {
 	mangaEvent := make(chan IRCMessage, 1000)
 	redditEvent := make(chan IRCMessage, 1000)
 	youtubeEvent := make(chan IRCMessage, 1000)
+	helpEvent := make(chan IRCMessage, 1000)
 
 	go func() {
 		for {
@@ -243,6 +246,7 @@ func main() {
 	go malSearch(mangaEvent, "manga", writeMessage, matchMALManga)
 	go reddit(redditEvent, writeMessage)
 	go youtube(youtubeEvent, writeMessage)
+	go help(helpEvent, writeMessage, conf.Channels)
 
 	auth(con, writeMessage, conf.UserName)
 	for _, channel := range conf.Channels {
@@ -271,6 +275,8 @@ func main() {
 			redditEvent <- *prepared
 		case matchYouTube.MatchString(prepared.msg):
 			youtubeEvent <- *prepared
+		case matchHelp.MatchString(prepared.msg):
+			helpEvent <- *prepared
 		//case matchAniDBSearch.MatchString(prepared.msg):
 		//anidbEvent <- prepared
 		default:
@@ -331,7 +337,6 @@ func getMsgInfo(msg string) (*IRCMessage, error) {
 	if len(match[0]) < 3 {
 		return imsg, errors.New("could not parse message")
 	}
-	log.Println(match)
 	imsg.user = user
 	imsg.channel = match[0][2]
 	if imsg.channel == user {
@@ -652,4 +657,31 @@ func malSearch(event chan IRCMessage, searchType string, writeMessage chan IRCMe
 			writeMessage <- IRCMessage{msg.channel, results, msg.user, msg.when}
 			return nil
 		})
+}
+
+func help(event chan IRCMessage, writeMessage chan IRCMessage, excludedChannels []string) {
+	for msg := range event {
+		stop := false
+		for _, channel := range excludedChannels {
+			if msg.channel == channel {
+				stop = true
+				break
+			}
+		}
+		if stop {
+			continue
+		}
+		helpMsg := IRCMessage{channel: msg.channel, user: msg.user, when: msg.when}
+		terms, err := getFirstMatch(matchHelpTerms, &msg.msg)
+		if err != nil {
+			helpMsg.msg = "Usage: help mal"
+			writeMessage <- helpMsg
+			continue
+		}
+		switch {
+		case *terms == "mal":
+			helpMsg.msg = "MAL search: !anime lain | !manga monster"
+		}
+		writeMessage <- helpMsg
+	}
 }
