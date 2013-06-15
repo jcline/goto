@@ -206,13 +206,16 @@ func main() {
 		}
 	}
 
+	user = conf.UserName
 	con, err := goty.Dial(conf.Server, conf.UserName, conf.RealName)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	rand.Seed(time.Now().UnixNano())
+
 	writeMessage := make(chan IRCMessage, 1000)
-	go messageHandler(con, writeMessage)
+	go messageHandler(con, writeMessage, conf.Channels, 10, 2)
 
 	amiAmiEvent := make(chan IRCMessage, 1000)
 	//anidbEvent := make(chan IRCMessage, 1000)
@@ -223,9 +226,18 @@ func main() {
 	redditEvent := make(chan IRCMessage, 1000)
 	youtubeEvent := make(chan IRCMessage, 1000)
 
+	go func() {
+		for {
+			duration := time.Duration(rand.Int63n(2*96)) * time.Hour
+			log.Println("Waiting ", duration)
+			time.Sleep(duration)
+			bastilleEvent <- IRCMessage{"#reddit-anime", "", "", time.Now()}
+		}
+	}()
+	go bastille(bastilleEvent, writeMessage)
+
 	go amiami(amiAmiEvent, writeMessage)
 	//go anidb(anidbEvent, writeMessage)
-	go bastille(bastilleEvent, writeMessage)
 	go gelbooru(gelbooruEvent, writeMessage)
 	go malSearch(animeEvent, "anime", writeMessage, matchMALAnime)
 	go malSearch(mangaEvent, "manga", writeMessage, matchMALManga)
@@ -280,20 +292,29 @@ type IRCMessage struct {
 }
 
 func message(con *goty.IRCConn, msg IRCMessage) {
-	con.Write <- "PRIVMSG " + msg.channel + " :" + msg.msg + "\r\n"
+	privmsg := "PRIVMSG " + msg.channel + " :" + msg.msg + "\r\n"
+	log.Println(privmsg)
+	con.Write <- privmsg
 }
 
-func messageHandler(con *goty.IRCConn, event chan IRCMessage) {
+func messageHandler(con *goty.IRCConn, event chan IRCMessage, channels []string, chanDelay, pmDelay int) {
 	allBooks := map[string]time.Time{}
-	chanBooks := map[string]time.Time{}
+	//chanBooks := map[string]time.Time{}
 	for msg := range event {
 		now := time.Now()
 		key := msg.channel + ":" + msg.user
-		if now.Sub(allBooks[key]) < time.Second*10 || now.Sub(chanBooks[key]) < time.Second*2 {
+		delay := pmDelay
+		for _, channel := range channels {
+			if msg.channel == channel {
+				delay = chanDelay
+				break
+			}
+		}
+		if now.Sub(allBooks[key]) < time.Duration(delay)*time.Second { //|| now.Sub(chanBooks[key]) < time.Second*2 {
 			continue
 		}
 		allBooks[key] = now
-		chanBooks[key] = now
+		//chanBooks[key] = now
 		message(con, msg)
 	}
 }
@@ -310,6 +331,7 @@ func getMsgInfo(msg string) (*IRCMessage, error) {
 	if len(match[0]) < 3 {
 		return imsg, errors.New("could not parse message")
 	}
+	log.Println(match)
 	imsg.user = user
 	imsg.channel = match[0][2]
 	if imsg.channel == user {
@@ -556,8 +578,10 @@ func (r Results) Less(i, j int) bool {
 }
 
 func malSearch(event chan IRCMessage, searchType string, writeMessage chan IRCMessage, match *regexp.Regexp) {
+	var terms *string
+	var err error
 	scrapeAndSend(event, func(msg *string) (*string, error) {
-		terms, err := getFirstMatch(match, msg)
+		terms, err = getFirstMatch(match, msg)
 		if err != nil {
 			return nil, err
 		}
@@ -589,7 +613,7 @@ func malSearch(event chan IRCMessage, searchType string, writeMessage chan IRCMe
 			}
 			sort.Sort(r)
 
-			length := 3
+			length := 2
 			if len(r) < length {
 				length = len(r)
 			}
@@ -597,6 +621,11 @@ func malSearch(event chan IRCMessage, searchType string, writeMessage chan IRCMe
 				if searchType == "anime" {
 					class := result.Classification
 					if class != "" {
+						if strings.Contains(class, "Rx") ||
+							strings.Contains(class, "R+") ||
+							strings.Contains(class, "Hentai") {
+							nsfw = true
+						}
 						class = " [Rating " + class + "]"
 					} else {
 						nsfw = true
@@ -613,7 +642,11 @@ func malSearch(event chan IRCMessage, searchType string, writeMessage chan IRCMe
 			}
 
 			if nsfw {
-				results += "NSFW"
+				results = "NSFW " + results
+			}
+
+			if len(r) > 3 {
+				results += "More: " + "http://myanimelist.net/" + searchType + ".php?q=" + url.QueryEscape(*terms)
 			}
 
 			writeMessage <- IRCMessage{msg.channel, results, msg.user, msg.when}
