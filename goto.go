@@ -24,14 +24,19 @@ import (
 
 var user = ""
 
+// Commands
 var matchHelp = regexp.MustCompile(`^help`)
 var matchHelpTerms = regexp.MustCompile(`^help (.+)`)
+
+// Filters
+var matchSpoilers = regexp.MustCompile(`(?i)(.*spoil.*)`)
+
 var matchAniDBSearch = regexp.MustCompile(`!anidb +(.+) *`)
 var matchAmiAmi = regexp.MustCompile(`(?:https?://|)(?:www\.|)amiami.com/((?:[^/]|\S)+/detail/\S+)`)
 var matchGelbooru = regexp.MustCompile(`(?:https?://|)\Qgelbooru.com/index.php?page=post&s=view&id=\E([\d]+)`)
 var matchMALAnime = regexp.MustCompile(`^!anime (.+)`)
 var matchMALManga = regexp.MustCompile(`^!manga (.+)`)
-var matchReddit = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(?:r/(?:[^/ ]|\S)+/comments/|)([a-z0-9]{6})/?(?:[ .]+|\z)`)
+var matchReddit = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(?:r/(?:[^/ ]|\S)+/comments/|)([a-z0-9]{5,8})/?(?:[ .]+|\z)`)
 var matchYouTube = regexp.MustCompile(`(?:https?://|)(?:www\.|)(youtu(?:\.be|be\.com)/\S+)`)
 
 func auth(con *goty.IRCConn, writeMessage chan IRCMessage, user string) {
@@ -272,9 +277,15 @@ func main() {
 		case matchMALManga.MatchString(prepared.msg):
 			mangaEvent <- *prepared
 		case matchReddit.MatchString(prepared.msg):
-			redditEvent <- *prepared
+			_, notFound := getFirstMatch(matchSpoilers, &prepared.msg)
+			if notFound != nil {
+				redditEvent <- *prepared
+			}
 		case matchYouTube.MatchString(prepared.msg):
-			youtubeEvent <- *prepared
+			_, notFound := getFirstMatch(matchSpoilers, &prepared.msg)
+			if notFound != nil {
+				youtubeEvent <- *prepared
+			}
 		case matchHelp.MatchString(prepared.msg):
 			helpEvent <- *prepared
 		//case matchAniDBSearch.MatchString(prepared.msg):
@@ -452,7 +463,10 @@ func reddit(event chan IRCMessage, writeMessage chan IRCMessage) {
 
 			cleanTitle := html.UnescapeString(*title)
 			if cleanTitle != "reddit.com: page not found" {
-				writeMessage <- IRCMessage{msg.channel, "[Reddit] " + cleanTitle, msg.user, msg.when}
+				_, notFound := getFirstMatch(matchSpoilers, &cleanTitle)
+				if notFound != nil {
+					writeMessage <- IRCMessage{msg.channel, "[Reddit] " + cleanTitle, msg.user, msg.when}
+				}
 			} else {
 				return errors.New("Page not found")
 			}
@@ -462,7 +476,7 @@ func reddit(event chan IRCMessage, writeMessage chan IRCMessage) {
 
 func youtube(event chan IRCMessage, writeMessage chan IRCMessage) {
 	matchTitle := regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
-	matchUser := regexp.MustCompile(`.*<a[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
+	matchUser := regexp.MustCompile(`.*<a[^>]+feature=watch[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
 
 	scrapeAndSend(event, func(msg *string) (*string, error) {
 		uri, err := getFirstMatch(matchYouTube, msg)
@@ -482,7 +496,10 @@ func youtube(event chan IRCMessage, writeMessage chan IRCMessage) {
 			if err != nil {
 				return err
 			}
-			writeMessage <- IRCMessage{msg.channel, "[YouTube] " + html.UnescapeString(*title+" uploaded by "+*user), msg.user, msg.when}
+			_, notFound := getFirstMatch(matchSpoilers, title)
+			if notFound != nil {
+				writeMessage <- IRCMessage{msg.channel, "[YouTube] " + html.UnescapeString(*title+" uploaded by "+*user), msg.user, msg.when}
+			}
 			return nil
 		})
 }
