@@ -18,7 +18,7 @@ type Plugin interface {
   Write(*IRCMessage, *string) (*IRCMessage, error)
 	Match() *regexp.Regexp
 	Event() chan IRCMessage
-	Setup() error
+	Setup() Plugin
 }
 
 type plugin struct {

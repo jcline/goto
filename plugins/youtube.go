@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"fmt"
 	"html"
 	"regexp"
 )
@@ -12,13 +11,13 @@ type Youtube struct {
 }
 
 
-func (plug Youtube) Setup() (err error) {
+func (plug Youtube) Setup() (res Plugin) {
 	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(youtu(?:\.be|be\.com)/\S+)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	plug.title = regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
 	plug.user = regexp.MustCompile(`.*<a[^>]+feature=watch[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
 	plug.event = make(chan IRCMessage, 1000)
-	fmt.Println(plug)
+	res = plug
 	return
 }
 

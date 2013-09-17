@@ -248,11 +248,11 @@ func main() {
 	*/
 
 	var plugins []plug.Plugin
-	plugins = append(plugins, plug.Youtube{})
+	plugins = append(plugins, plug.Youtube{}.Setup())
+	plugins = append(plugins, plug.AmiAmi{}.Setup())
+	plugins = append(plugins, plug.Reddit{}.Setup())
 
 	for _, plugin := range plugins {
-		plugin.Setup()
-		fmt.Println(plugin)
 		go scrapeAndSend(plugin.Event(), plugin.FindUri, plugin.Write, writeMessage)
 	}
 
@@ -271,9 +271,7 @@ func main() {
 		prepared.When = time.Now()
 
 		for _, plugin := range plugins {
-			fmt.Println(plugin)
-			re := *plugin.Match()
-			if re.MatchString(prepared.Msg) {
+			if plugin.Match().MatchString(prepared.Msg) {
 				plugin.Event() <- *prepared
 			}
 		}
