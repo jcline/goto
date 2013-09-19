@@ -9,17 +9,15 @@ type AmiAmi struct {
 	discount, title *regexp.Regexp
 }
 
-
-func (plug AmiAmi) Setup() (res Plugin) {
+func (plug *AmiAmi) Setup() {
 	plug.discount = regexp.MustCompile(`[0-9]+\%OFF `)
 	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)amiami.com/((?:[^/]|\S)+/detail/\S+)`)
 	plug.title = regexp.MustCompile(`.*<meta property="og:title" content="(.+)" />.*`)
 	plug.event = make(chan IRCMessage, 1000)
-	res = plug
 	return
 }
 
-func (plug AmiAmi) FindUri(candidate *string) (uri *string, err error) {
+func (plug *AmiAmi) FindUri(candidate *string) (uri *string, err error) {
 	uri, err = getFirstMatch(plug.match, candidate)
 	if err != nil {
 		uri = nil

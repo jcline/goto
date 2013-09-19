@@ -1,24 +1,18 @@
 package main
 
 import (
+	plug "./plugins"
 	"encoding/json"
-	//"encoding/xml" // gelbooru parsing
 	"errors"
 	"fmt"
-	//"github.com/jcline/DamerauLevenshteinDistance"
 	"github.com/jcline/goty"
-	//"html"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
-	//"net/url"
 	"os"
 	"path/filepath"
-	plug "./plugins"
 	"regexp"
-	//"sort"
-	//"strconv"
 	"strings"
 	"time"
 )
@@ -31,16 +25,7 @@ type WriteFunc func(*plug.IRCMessage, *string) (*plug.IRCMessage, error)
 // Commands
 var matchHelp = regexp.MustCompile(`^help`)
 var matchHelpTerms = regexp.MustCompile(`^help (.+)`)
-
-// Filters
 var matchSpoilers = regexp.MustCompile(`(?i)(.*spoil.*)`)
-
-var matchAniDBSearch = regexp.MustCompile(`!anidb +(.+) *`)
-var matchAmiAmi = regexp.MustCompile(`(?:https?://|)(?:www\.|)amiami.com/((?:[^/]|\S)+/detail/\S+)`)
-var matchGelbooru = regexp.MustCompile(`(?:https?://|)\Qgelbooru.com/index.php?page=post&s=view&id=\E([\d]+)`)
-var matchMALAnime = regexp.MustCompile(`^!anime (.+)`)
-var matchMALManga = regexp.MustCompile(`^!manga (.+)`)
-var matchReddit = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(?:r/(?:[^/ ]|\S)+/comments/|)([a-z0-9]{5,8})/?(?:[ .]+|\z)`)
 
 func auth(con *goty.IRCConn, writeMessage chan plug.IRCMessage, user string) {
 	var pswd string
@@ -227,32 +212,14 @@ func main() {
 	writeMessage := make(chan plug.IRCMessage, 1000)
 	go messageHandler(con, writeMessage, conf.Channels, 10, 2)
 
-	/*
-	go func() {
-		for {
-			duration := time.Duration(rand.Int63n(2*96)) * time.Hour
-			log.Println("Waiting ", duration)
-			time.Sleep(duration)
-			bastilleEvent <- plug.IRCMessage{"#reddit-anime", "", "", time.Now()}
-		}
-	}()
-	go bastille(bastilleEvent, writeMessage)
-
-	go amiami(amiAmiEvent, writeMessage)
-	//go anidb(anidbEvent, writeMessage)
-	go gelbooru(gelbooruEvent, writeMessage)
-	go malSearch(animeEvent, "anime", writeMessage, matchMALAnime)
-	go malSearch(mangaEvent, "manga", writeMessage, matchMALManga)
-	go reddit(redditEvent, writeMessage)
-	go help(helpEvent, writeMessage, conf.Channels)
-	*/
-
 	var plugins []plug.Plugin
-	plugins = append(plugins, plug.Youtube{}.Setup())
-	plugins = append(plugins, plug.AmiAmi{}.Setup())
-	plugins = append(plugins, plug.Reddit{}.Setup())
+	plugins = append(plugins, new(plug.Youtube))
+	plugins = append(plugins, new(plug.AmiAmi))
+	plugins = append(plugins, new(plug.Reddit))
+	plugins = append(plugins, new(plug.Mal))
 
 	for _, plugin := range plugins {
+		plugin.Setup()
 		go scrapeAndSend(plugin.Event(), plugin.FindUri, plugin.Write, writeMessage)
 	}
 
@@ -265,43 +232,19 @@ func main() {
 		log.Printf("%s\n", msg)
 		prepared, err := getMsgInfo(msg)
 		if err != nil {
-			//log.Printf("%v\n", err)
 			continue
 		}
 		prepared.When = time.Now()
 
-		for _, plugin := range plugins {
-			if plugin.Match().MatchString(prepared.Msg) {
-				plugin.Event() <- *prepared
+		// half assed filtering
+		_, notFound := getFirstMatch(matchSpoilers, &prepared.Msg)
+		if notFound != nil {
+			for _, plugin := range plugins {
+				if plugin.Match().MatchString(prepared.Msg) {
+					plugin.Event() <- *prepared
+				}
 			}
 		}
-		/*
-		switch {
-		case matchAmiAmi.MatchString(prepared.Msg):
-			amiAmiEvent <- *prepared
-		case matchGelbooru.MatchString(prepared.Msg):
-			//gelbooruEvent <- matchGelbooru.FindAllStringSubmatch(prepared.Msg, -1)[0][1]
-		case matchMALAnime.MatchString(prepared.Msg):
-			animeEvent <- *prepared
-		case matchMALManga.MatchString(prepared.Msg):
-			mangaEvent <- *prepared
-		case matchReddit.MatchString(prepared.Msg):
-			_, notFound := getFirstMatch(matchSpoilers, &prepared.Msg)
-			if notFound != nil {
-				redditEvent <- *prepared
-			}
-		//case matchYouTube.MatchString(prepared.Msg):
-			//_, notFound := getFirstMatch(matchSpoilers, &prepared.Msg)
-			//if notFound != nil {
-				//youtubeEvent <- *prepared
-			//}
-		case matchHelp.MatchString(prepared.Msg):
-			helpEvent <- *prepared
-		//case matchAniDBSearch.MatchString(prepared.Msg):
-		//anidbEvent <- prepared
-		default:
-		}
-		*/
 	}
 	con.Close()
 }
@@ -420,258 +363,3 @@ func getFirstMatch(re *regexp.Regexp, matchee *string) (*string, error) {
 	}
 	return &match[0][1], nil
 }
-
-/*
-func amiami(event chan plug.IRCMessage, writeMessage chan plug.IRCMessage) {
-	matchTitle := regexp.MustCompile(`.*<meta property="og:title" content="(.+)" />.*`)
-	matchDiscount := regexp.MustCompile(`[0-9]+\%OFF `)
-	scrapeAndSend(event, func(msg *string) (*string, error) {
-		uri, err := getFirstMatch(matchAmiAmi, msg)
-		if err != nil {
-			return nil, err
-		}
-
-		fullUri := "http://amiami.com/" + *uri
-		return &fullUri, nil
-	},
-		func(msg *plug.IRCMessage, body *string) error {
-			title, err := getFirstMatch(matchTitle, body)
-			if err != nil {
-				return err
-			}
-
-			writeMessage <- plug.IRCMessage{msg.Channel, "[AmiAmi] " + matchDiscount.ReplaceAllLiteralString(*title, ""), msg.User, msg.When}
-			return nil
-		})
-}
-
-func reddit(event chan plug.IRCMessage, writeMessage chan plug.IRCMessage) {
-	matchTitle := regexp.MustCompile(`.*<title>(.+)</title>.*`)
-
-	scrapeAndSend(event, func(msg *string) (*string, error) {
-		uri, err := getFirstMatch(matchReddit, msg)
-		if err != nil {
-			return nil, err
-		}
-
-		fullUri := "http://reddit.com/" + *uri
-		return &fullUri, nil
-	},
-		func(msg *plug.IRCMessage, body *string) error {
-			title, err := getFirstMatch(matchTitle, body)
-			if err != nil {
-				return err
-			}
-
-			cleanTitle := html.UnescapeString(*title)
-			if cleanTitle != "reddit.com: page not found" {
-				_, notFound := getFirstMatch(matchSpoilers, &cleanTitle)
-				if notFound != nil {
-					writeMessage <- plug.IRCMessage{msg.Channel, "[Reddit] " + cleanTitle, msg.User, msg.When}
-				}
-			} else {
-				return errors.New("Page not found")
-			}
-			return nil
-		})
-}
-
-func gelbooru(event chan plug.IRCMessage, writeMessage chan plug.IRCMessage) {
-	type Post struct {
-		post string
-		tags string `xml:",attr"`
-	}
-
-	for msg := range event {
-		resp, err := http.Get("http://gelbooru.com/index.php?page=dapi&s=post&q=index&tags&id=" + msg.Msg)
-		if err != nil {
-			fmt.Printf("%v\n", err)
-			continue
-		}
-
-		body, err := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil {
-			fmt.Printf("%v\n", err)
-			continue
-		}
-
-		fmt.Printf("%s\n", body)
-
-		var result Post
-
-		err = xml.Unmarshal(body, &result)
-		if err != nil {
-			fmt.Printf("%v\n", err)
-			continue
-		}
-
-		fmt.Printf("%s\n", result.tags)
-		writeMessage <- plug.IRCMessage{msg.Channel, "tobedone", msg.User, msg.When}
-	}
-}
-
-func anidb(event chan plug.IRCMessage, writeMessage chan plug.IRCMessage) {
-	cache := make(map[string]string)
-
-	for msg := range event {
-		val, ok := cache[msg.Msg]
-		if ok {
-			writeMessage <- plug.IRCMessage{msg.Channel, val, msg.User, msg.When}
-		} else {
-			// totally broken :(
-			resp, err := http.Get("http://anisearch.outrance.pl/index.php?task=search&query=" + msg.Msg)
-			if err != nil {
-				fmt.Printf("%v\n", err)
-				continue
-			}
-
-			body, err := ioutil.ReadAll(resp.Body)
-			resp.Body.Close()
-			if err != nil {
-				fmt.Printf("%v\n", err)
-				continue
-			}
-
-			fmt.Printf("%s\n", body)
-
-			//cache[msg.Msg] = ""
-		}
-	}
-}
-
-type Results []Result
-type Result struct {
-	Id             int
-	Title          string
-	Classification string
-	search         string
-	computed       bool
-	distance       int
-}
-
-func (r Results) Len() int {
-	return len(r)
-}
-
-func (r Results) Swap(i, j int) {
-	r[i], r[j] = r[j], r[i]
-}
-
-func (r Results) Less(i, j int) bool {
-	if !r[i].computed {
-		r[i].distance = DamerauLevenshteinDistance.Distance(r[i].search, r[i].Title)
-		r[i].computed = true
-	}
-	if !r[j].computed {
-		r[j].distance = DamerauLevenshteinDistance.Distance(r[j].search, r[j].Title)
-		r[j].computed = true
-	}
-
-	return r[i].distance < r[j].distance
-}
-
-func malSearch(event chan plug.IRCMessage, searchType string, writeMessage chan plug.IRCMessage, match *regexp.Regexp) {
-	var terms *string
-	var err error
-	scrapeAndSend(event, func(msg *string) (*string, error) {
-		terms, err = getFirstMatch(match, msg)
-		if err != nil {
-			return nil, err
-		}
-		uri := "http://mal-api.com/" + searchType + "/search?q=" + url.QueryEscape(*terms)
-		return &uri, nil
-	},
-		func(msg *plug.IRCMessage, body *string) error {
-			if len(*body) < 10 {
-				writeMessage <- plug.IRCMessage{msg.Channel, "┐('～`；)┌", msg.User, msg.When}
-				return errors.New("No results")
-			}
-
-			var r Results
-			err := json.Unmarshal([]byte(*body), &r)
-			if err != nil {
-				writeMessage <- plug.IRCMessage{msg.Channel, "┐('～`；)┌", msg.User, msg.When}
-				return err
-			}
-			fmt.Printf("%v\n", r)
-
-			var results = ""
-			var nsfw = false
-			reference, _ := getFirstMatch(match, &msg.Msg)
-
-			for i, _ := range r {
-				r[i].Title = html.UnescapeString(r[i].Title)
-				r[i].search = *reference
-				r[i].computed = false
-			}
-			sort.Sort(r)
-
-			length := 2
-			if len(r) < length {
-				length = len(r)
-			}
-			for count, result := range r {
-				if searchType == "anime" {
-					class := result.Classification
-					if class != "" {
-						if strings.Contains(class, "Rx") ||
-							strings.Contains(class, "R+") ||
-							strings.Contains(class, "Hentai") {
-							nsfw = true
-						}
-						class = " [Rating " + class + "]"
-					} else {
-						nsfw = true
-					}
-
-					results += result.Title + class + " http://myanimelist.net/" + searchType + "/" + strconv.Itoa(result.Id) + "  "
-				} else {
-					results += result.Title + " http://myanimelist.net/" + searchType + "/" + strconv.Itoa(result.Id) + "  "
-					nsfw = true
-				}
-				if count >= length {
-					break
-				}
-			}
-
-			if nsfw {
-				results = "NSFW " + results
-			}
-
-			if len(r) > 3 {
-				results += "More: " + "http://myanimelist.net/" + searchType + ".php?q=" + url.QueryEscape(*terms)
-			}
-
-			writeMessage <- plug.IRCMessage{msg.Channel, results, msg.User, msg.When}
-			return nil
-		})
-}
-
-func help(event chan plug.IRCMessage, writeMessage chan plug.IRCMessage, excludedChannels []string) {
-	for msg := range event {
-		stop := false
-		for _, channel := range excludedChannels {
-			if msg.Channel == channel {
-				stop = true
-				break
-			}
-		}
-		if stop {
-			continue
-		}
-		helpMsg := plug.IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When}
-		terms, err := getFirstMatch(matchHelpTerms, &msg.Msg)
-		if err != nil {
-			helpMsg.Msg = "Usage: help mal"
-			writeMessage <- helpMsg
-			continue
-		}
-		switch {
-		case *terms == "mal":
-			helpMsg.Msg = "MAL search: !anime lain | !manga monster"
-		}
-		writeMessage <- helpMsg
-	}
-}
-*/

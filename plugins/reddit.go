@@ -11,17 +11,15 @@ type Reddit struct {
 	spoiler, title *regexp.Regexp
 }
 
-
-func (plug Reddit) Setup() (res Plugin) {
-	plug.match = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(?:r/(?:[^/ ]|\S)+/comments/|)([a-z0-9]{5,8})/?(?:[ .]+|\z)`) 
+func (plug *Reddit) Setup() {
+	plug.match = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(?:r/(?:[^/ ]|\S)+/comments/|)([a-z0-9]{5,8})/?(?:[ .]+|\z)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	plug.title = regexp.MustCompile(`.*<title>(.+)</title>.*`)
 	plug.event = make(chan IRCMessage, 1000)
-	res = plug
 	return
 }
 
-func (plug Reddit) FindUri(candidate *string) (uri *string, err error) {
+func (plug *Reddit) FindUri(candidate *string) (uri *string, err error) {
 	uri, err = getFirstMatch(plug.match, candidate)
 	if err != nil {
 		uri = nil
