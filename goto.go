@@ -303,20 +303,6 @@ func getMsgInfo(msg string) (*plug.IRCMessage, error) {
 	return imsg, nil
 }
 
-func bastille(event chan plug.IRCMessage, writeMessage chan plug.IRCMessage) {
-	msgs := []string{
-		"Bastille, yo brodudedudebro!!!!1",
-		"Bastille, wat up homie",
-		"Bastille, word",
-		"Bastille, duuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuude",
-		"'sup Bastille?",
-	}
-
-	for msg := range event {
-		writeMessage <- plug.IRCMessage{msg.Channel, msgs[rand.Intn(len(msgs))-1], msg.User, msg.When}
-	}
-}
-
 func scrapeAndSend(event chan plug.IRCMessage, findUri UriFunc, write WriteFunc, writeMessage chan plug.IRCMessage) {
 	var f = func(msg plug.IRCMessage) {
 		uri, err := findUri(&msg.Msg)
