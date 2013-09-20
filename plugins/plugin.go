@@ -2,8 +2,8 @@ package plugins
 
 import (
 	"errors"
-	"log"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"regexp"
 	"time"
@@ -80,4 +80,3 @@ func scrapeAndSend(plug scrapePlugin) {
 		}
 	}()
 }
-

@@ -12,7 +12,7 @@ type Reddit struct {
 }
 
 func (plug *Reddit) Setup(write chan IRCMessage) {
-	plug.write = write;
+	plug.write = write
 	plug.match = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(?:r/(?:[^/ ]|\S)+/comments/|)([a-z0-9]{5,8})/?(?:[ .]+|\z)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	plug.title = regexp.MustCompile(`.*<title>(.+)</title>.*`)

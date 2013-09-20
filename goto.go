@@ -212,10 +212,11 @@ func main() {
 	go messageHandler(con, writeMessage, conf.Channels, 10, 2)
 
 	var plugins []plug.Plugin
-	plugins = append(plugins, new(plug.Youtube))
 	plugins = append(plugins, new(plug.AmiAmi))
-	plugins = append(plugins, new(plug.Reddit))
 	plugins = append(plugins, new(plug.Mal))
+	plugins = append(plugins, new(plug.Reddit))
+	plugins = append(plugins, new(plug.Vimeo))
+	plugins = append(plugins, new(plug.Youtube))
 
 	for _, plugin := range plugins {
 		plugin.Setup(writeMessage)
