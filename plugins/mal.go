@@ -47,12 +47,14 @@ type Mal struct {
 	searchType, terms         *string
 }
 
-func (plug *Mal) Setup() {
+func (plug *Mal) Setup(write chan IRCMessage) {
+	plug.write = write
 	plug.match = regexp.MustCompile(`^!(?:anime|manga) (.+)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	plug.title = regexp.MustCompile(`.*<title>(.+)</title>.*`)
 	plug.typeMatch = regexp.MustCompile(`^!(anime|manga) .+`)
 	plug.event = make(chan IRCMessage, 1000)
+	scrapeAndSend(plug)
 	return
 }
 
@@ -76,10 +78,10 @@ func (plug *Mal) FindUri(candidate *string) (uri *string, err error) {
 	return
 }
 
-func (plug Mal) Write(msg *IRCMessage, body *string) (outMsg *IRCMessage, err error) {
+func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 	fmt.Println(plug)
 	if len(*body) < 10 {
-		outMsg = &IRCMessage{msg.Channel, "┐('～`；)┌", msg.User, msg.When}
+		plug.write <- IRCMessage{msg.Channel, "┐('～`；)┌", msg.User, msg.When}
 		err = errors.New("No results")
 		return
 	}
@@ -87,7 +89,7 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (outMsg *IRCMessage, err er
 	var r results
 	err = json.Unmarshal([]byte(*body), &r)
 	if err != nil {
-		outMsg = &IRCMessage{msg.Channel, "┐('～`；)┌", msg.User, msg.When}
+		plug.write <- IRCMessage{msg.Channel, "┐('～`；)┌", msg.User, msg.When}
 		return
 	}
 	fmt.Printf("%v\n", r)
@@ -139,7 +141,7 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (outMsg *IRCMessage, err er
 		resultString += "More: " + "http://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms)
 	}
 
-	outMsg = &IRCMessage{msg.Channel, resultString, msg.User, msg.When}
+	plug.write <- IRCMessage{msg.Channel, resultString, msg.User, msg.When}
 	return
 }
 

@@ -9,11 +9,13 @@ type AmiAmi struct {
 	discount, title *regexp.Regexp
 }
 
-func (plug *AmiAmi) Setup() {
+func (plug *AmiAmi) Setup(write chan IRCMessage) {
+	plug.write = write
 	plug.discount = regexp.MustCompile(`[0-9]+\%OFF `)
 	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)amiami.com/((?:[^/]|\S)+/detail/\S+)`)
 	plug.title = regexp.MustCompile(`.*<meta property="og:title" content="(.+)" />.*`)
 	plug.event = make(chan IRCMessage, 1000)
+	scrapeAndSend(plug)
 	return
 }
 
@@ -28,14 +30,13 @@ func (plug *AmiAmi) FindUri(candidate *string) (uri *string, err error) {
 	return
 }
 
-func (plug AmiAmi) Write(msg *IRCMessage, body *string) (outMsg *IRCMessage, err error) {
-	outMsg = nil
+func (plug AmiAmi) Write(msg *IRCMessage, body *string) (err error) {
 	title, err := getFirstMatch(plug.title, body)
 	if err != nil {
 		return
 	}
 
-	outMsg = &IRCMessage{msg.Channel, "[AmiAmi] " + plug.discount.ReplaceAllLiteralString(*title, ""), msg.User, msg.When}
+	plug.write <- IRCMessage{msg.Channel, "[AmiAmi] " + plug.discount.ReplaceAllLiteralString(*title, ""), msg.User, msg.When}
 
 	return
 }

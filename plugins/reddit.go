@@ -11,11 +11,13 @@ type Reddit struct {
 	spoiler, title *regexp.Regexp
 }
 
-func (plug *Reddit) Setup() {
+func (plug *Reddit) Setup(write chan IRCMessage) {
+	plug.write = write;
 	plug.match = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(?:r/(?:[^/ ]|\S)+/comments/|)([a-z0-9]{5,8})/?(?:[ .]+|\z)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	plug.title = regexp.MustCompile(`.*<title>(.+)</title>.*`)
 	plug.event = make(chan IRCMessage, 1000)
+	scrapeAndSend(plug)
 	return
 }
 
@@ -30,8 +32,7 @@ func (plug *Reddit) FindUri(candidate *string) (uri *string, err error) {
 	return
 }
 
-func (plug Reddit) Write(msg *IRCMessage, body *string) (outMsg *IRCMessage, err error) {
-	outMsg = nil
+func (plug Reddit) Write(msg *IRCMessage, body *string) (err error) {
 	title, err := getFirstMatch(plug.title, body)
 	if err != nil {
 		return
@@ -41,7 +42,7 @@ func (plug Reddit) Write(msg *IRCMessage, body *string) (outMsg *IRCMessage, err
 	if cleanTitle != "reddit.com: page not found" {
 		_, notFound := getFirstMatch(plug.spoiler, &cleanTitle)
 		if notFound != nil {
-			outMsg = &IRCMessage{msg.Channel, "[Reddit] " + cleanTitle, msg.User, msg.When}
+			plug.write <- IRCMessage{msg.Channel, "[Reddit] " + cleanTitle, msg.User, msg.When}
 		}
 	} else {
 		err = errors.New("Page not found")

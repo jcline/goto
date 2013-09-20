@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -219,8 +218,7 @@ func main() {
 	plugins = append(plugins, new(plug.Mal))
 
 	for _, plugin := range plugins {
-		plugin.Setup()
-		go scrapeAndSend(plugin.Event(), plugin.FindUri, plugin.Write, writeMessage)
+		plugin.Setup(writeMessage)
 	}
 
 	auth(con, writeMessage, conf.UserName)
@@ -301,42 +299,6 @@ func getMsgInfo(msg string) (*plug.IRCMessage, error) {
 	}
 	imsg.Msg = match[0][3]
 	return imsg, nil
-}
-
-func scrapeAndSend(event chan plug.IRCMessage, findUri UriFunc, write WriteFunc, writeMessage chan plug.IRCMessage) {
-	var f = func(msg plug.IRCMessage) {
-		uri, err := findUri(&msg.Msg)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		resp, err := http.Get(*uri)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		defer resp.Body.Close()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		body := string(bodyBytes)
-
-		outMsg, err := write(&msg, &body)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-
-		writeMessage <- *outMsg
-	}
-
-	for msg := range event {
-		go f(msg)
-	}
 }
 
 func getFirstMatch(re *regexp.Regexp, matchee *string) (*string, error) {
