@@ -22,8 +22,6 @@ type UriFunc func(*string) (*string, error)
 type WriteFunc func(*plug.IRCMessage, *string) (*plug.IRCMessage, error)
 
 // Commands
-var matchHelp = regexp.MustCompile(`^help`)
-var matchHelpTerms = regexp.MustCompile(`^help (.+)`)
 var matchSpoilers = regexp.MustCompile(`(?i)(.*spoil.*)`)
 
 func auth(con *goty.IRCConn, writeMessage chan plug.IRCMessage, user string) {
@@ -213,6 +211,7 @@ func main() {
 
 	var plugins []plug.Plugin
 	plugins = append(plugins, new(plug.AmiAmi))
+	plugins = append(plugins, new(plug.Help))
 	plugins = append(plugins, new(plug.Mal))
 	plugins = append(plugins, new(plug.Reddit))
 	plugins = append(plugins, new(plug.Vimeo))
@@ -293,11 +292,8 @@ func getMsgInfo(msg string) (*plug.IRCMessage, error) {
 	if len(match[0]) < 3 {
 		return imsg, errors.New("could not parse message")
 	}
-	imsg.User = user
+	imsg.User = match[0][1]
 	imsg.Channel = match[0][2]
-	if imsg.Channel == user {
-		imsg.Channel = match[0][1]
-	}
 	imsg.Msg = match[0][3]
 	return imsg, nil
 }

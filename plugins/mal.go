@@ -81,7 +81,7 @@ func (plug *Mal) FindUri(candidate *string) (uri *string, err error) {
 func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 	fmt.Println(plug)
 	if len(*body) < 10 {
-		plug.write <- IRCMessage{msg.Channel, "┐('～`；)┌", msg.User, msg.When}
+		plug.write <- IRCMessage{Channel: msg.Channel, Msg: "┐('～`；)┌", User: msg.User, When: msg.When}
 		err = errors.New("No results")
 		return
 	}
@@ -89,7 +89,7 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 	var r results
 	err = json.Unmarshal([]byte(*body), &r)
 	if err != nil {
-		plug.write <- IRCMessage{msg.Channel, "┐('～`；)┌", msg.User, msg.When}
+		plug.write <- IRCMessage{Channel: msg.Channel, Msg: "┐('～`；)┌", User: msg.User, When: msg.When}
 		return
 	}
 	fmt.Printf("%v\n", r)
@@ -141,7 +141,7 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 		resultString += "More: " + "http://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms)
 	}
 
-	plug.write <- IRCMessage{msg.Channel, resultString, msg.User, msg.When}
+	plug.write <- IRCMessage{Channel: msg.Channel, Msg: resultString, User: msg.User, When: msg.When}
 	return
 }
 

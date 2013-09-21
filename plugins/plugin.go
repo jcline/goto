@@ -34,15 +34,29 @@ type plugin struct {
 	write chan IRCMessage
 }
 
-func getFirstMatch(re *regexp.Regexp, matchee *string) (*string, error) {
-	match := re.FindAllStringSubmatch(*matchee, -1)
+func getMatch(re *regexp.Regexp, matchee *string) (match [][]string, err error) {
+	match = nil
+	match = re.FindAllStringSubmatch(*matchee, -1)
 	if len(match) < 1 {
-		return nil, errors.New("Could not match")
+		err = errors.New("Could not match")
+		return
 	}
-	if len(match[0]) < 2 {
-		return nil, errors.New("Could not match")
+	return
+}
+
+func getFirstMatch(re *regexp.Regexp, matchee *string) (match *string, err error) {
+	match = nil
+	matches, err := getMatch(re, matchee)
+	if err != nil {
+		return
 	}
-	return &match[0][1], nil
+
+	if len(matches[0]) < 2 {
+		err = errors.New("Could not match")
+		return
+	}
+	match = &matches[0][1]
+	return
 }
 
 func scrapeAndSend(plug scrapePlugin) {

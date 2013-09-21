@@ -36,7 +36,8 @@ func (plug AmiAmi) Write(msg *IRCMessage, body *string) (err error) {
 		return
 	}
 
-	plug.write <- IRCMessage{msg.Channel, "[AmiAmi] " + plug.discount.ReplaceAllLiteralString(*title, ""), msg.User, msg.When}
+	plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,
+	Msg: "[AmiAmi] " + plug.discount.ReplaceAllLiteralString(*title, "")}
 
 	return
 }

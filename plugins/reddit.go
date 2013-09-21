@@ -42,7 +42,7 @@ func (plug Reddit) Write(msg *IRCMessage, body *string) (err error) {
 	if cleanTitle != "reddit.com: page not found" {
 		_, notFound := getFirstMatch(plug.spoiler, &cleanTitle)
 		if notFound != nil {
-			plug.write <- IRCMessage{msg.Channel, "[Reddit] " + cleanTitle, msg.User, msg.When}
+			plug.write <- IRCMessage{Channel: msg.Channel, Msg: "[Reddit] " + cleanTitle, User: msg.User, When: msg.When}
 		}
 	} else {
 		err = errors.New("Page not found")

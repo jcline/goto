@@ -45,10 +45,11 @@ func (plug Youtube) Write(msg *IRCMessage, body *string) (err error) {
 
 	_, notFound := getFirstMatch(plug.spoiler, title)
 	if notFound != nil {
-		plug.write <- IRCMessage{msg.Channel, "[YouTube] " + html.UnescapeString(*title+" uploaded by "+*user), msg.User, msg.When}
+		plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,
+			Msg: "[YouTube] " + html.UnescapeString(*title+" uploaded by "+*user)}
 	} else {
-		plug.write <- IRCMessage{msg.Channel, "[YouTube] [[Title omitted due to possible spoilers]] uploaded by " + *user,
-			msg.User, msg.When}
+		plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,
+		Msg: "[YouTube] [[Title omitted due to possible spoilers]] uploaded by " + *user}
 	}
 
 	return
