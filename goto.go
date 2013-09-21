@@ -1,7 +1,7 @@
 package main
 
 import (
-	plug "./plugins"
+	plug "github.com/jcline/goto/plugins"
 	"encoding/json"
 	"errors"
 	"fmt"
