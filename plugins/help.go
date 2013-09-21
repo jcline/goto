@@ -53,8 +53,6 @@ func (plug Help) Action() {
 				}
 			}
 
-			log.Println(key)
-			log.Println(query)
 			if val, ok := plug.help[key]; ok {
 				plug.write <- IRCMessage{Channel: msg.User, Msg: val, User: msg.User, When: msg.When}
 			} else {
