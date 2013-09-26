@@ -213,6 +213,7 @@ func main() {
 	plugins = append(plugins, new(plug.AmiAmi))
 	plugins = append(plugins, new(plug.Help))
 	plugins = append(plugins, new(plug.Mal))
+	plugins = append(plugins, new(plug.MyFigureCollection))
 	plugins = append(plugins, new(plug.Plamoya))
 	plugins = append(plugins, new(plug.Reddit))
 	plugins = append(plugins, new(plug.Vimeo))
