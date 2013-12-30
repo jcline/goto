@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestMatchUri(t *testing.T) {
+func VimeoTestMatchUri(t *testing.T) {
 	vimeo := Vimeo{}
 	vimeo.Setup(make(chan IRCMessage))
 
@@ -28,7 +28,7 @@ func TestMatchUri(t *testing.T) {
 	}
 }
 
-func TestMatchTitle(t *testing.T) {
+func VimeoTestMatchTitle(t *testing.T) {
 	vimeo := Vimeo{}
 	vimeo.Setup(make(chan IRCMessage))
 
@@ -55,7 +55,7 @@ func TestMatchTitle(t *testing.T) {
 	}
 }
 
-func TestMatchUser(t *testing.T) {
+func VimeoTestMatchUser(t *testing.T) {
 	vimeo := Vimeo{}
 	vimeo.Setup(make(chan IRCMessage))
 
