@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func YoutubeTestMatchUri(t *testing.T) {
+func TestYoutubeMatchUri(t *testing.T) {
 	youtube := Youtube{}
 	youtube.Setup(make(chan IRCMessage))
 
@@ -41,3 +41,27 @@ func YoutubeTestMatchUri(t *testing.T) {
 	}
 }
 
+func TestYoutubeFindUri(t *testing.T) {
+	youtube := Youtube{}
+	youtube.Setup(make(chan IRCMessage))
+
+	uris := []struct {
+		uri string
+		result string
+		err bool
+	}{
+		{"https://www.youtube.com/v/O2rGTXHvPCQ&hl=en_US&fs=1&", "http://www.youtube.com/watch?v=O2rGTXHvPCQ&hl=en_US&fs=1&", false},
+	}
+
+	for _, test := range uris {
+		result, err := youtube.FindUri(&test.uri)
+		errResult := err != nil
+		if errResult != test.err {
+			t.Error(test.uri, "expected errResult to be", test.err, "but got", errResult, ":", err)
+		}
+
+		if *result != test.result {
+			t.Error(test.uri, "expected", test.result, "but got", *result)
+		}
+	}
+}

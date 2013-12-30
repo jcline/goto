@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func VimeoTestMatchUri(t *testing.T) {
+func TestVimeoMatchUri(t *testing.T) {
 	vimeo := Vimeo{}
 	vimeo.Setup(make(chan IRCMessage))
 
@@ -28,7 +28,7 @@ func VimeoTestMatchUri(t *testing.T) {
 	}
 }
 
-func VimeoTestMatchTitle(t *testing.T) {
+func TestVimeoMatchTitle(t *testing.T) {
 	vimeo := Vimeo{}
 	vimeo.Setup(make(chan IRCMessage))
 
@@ -45,7 +45,7 @@ func VimeoTestMatchTitle(t *testing.T) {
 							<meta property="og:title" content="testestestest">
 	`
 
-	title, err := getFirstMatch(vimeo.title, &html)
+	title, err := GetFirstMatch(vimeo.title, &html)
 	if err != nil {
 		t.Error(err)
 	}
@@ -55,7 +55,7 @@ func VimeoTestMatchTitle(t *testing.T) {
 	}
 }
 
-func VimeoTestMatchUser(t *testing.T) {
+func TestVimeoMatchUser(t *testing.T) {
 	vimeo := Vimeo{}
 	vimeo.Setup(make(chan IRCMessage))
 
@@ -85,7 +85,7 @@ func VimeoTestMatchUser(t *testing.T) {
 	</div>
 	`
 
-	user, err := getFirstMatch(vimeo.user, &html)
+	user, err := GetFirstMatch(vimeo.user, &html)
 	if err != nil {
 		t.Error(err)
 	}
