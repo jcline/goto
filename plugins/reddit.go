@@ -22,7 +22,7 @@ func (plug *Reddit) Setup(write chan IRCMessage) {
 }
 
 func (plug *Reddit) FindUri(candidate *string) (uri *string, err error) {
-	uri, err = getFirstMatch(plug.match, candidate)
+	uri, err = GetFirstMatch(plug.match, candidate)
 	if err != nil {
 		uri = nil
 		return
@@ -33,14 +33,14 @@ func (plug *Reddit) FindUri(candidate *string) (uri *string, err error) {
 }
 
 func (plug Reddit) Write(msg *IRCMessage, body *string) (err error) {
-	title, err := getFirstMatch(plug.title, body)
+	title, err := GetFirstMatch(plug.title, body)
 	if err != nil {
 		return
 	}
 
 	cleanTitle := html.UnescapeString(*title)
 	if cleanTitle != "reddit.com: page not found" {
-		_, notFound := getFirstMatch(plug.spoiler, &cleanTitle)
+		_, notFound := GetFirstMatch(plug.spoiler, &cleanTitle)
 		if notFound != nil {
 			plug.write <- IRCMessage{Channel: msg.Channel, Msg: "[Reddit] " + cleanTitle, User: msg.User, When: msg.When}
 		}

@@ -12,7 +12,7 @@ type Youtube struct {
 
 func (plug *Youtube) Setup(write chan IRCMessage) {
 	plug.write = write
-	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(youtu(?:\.be|be\.com)/\S+)`)
+	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(?:youtu(?:\.be|be\.com)/(?:v/|)(\S+))`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	plug.title = regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
 	plug.user = regexp.MustCompile(`.*<a[^>]+feature=watch[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
@@ -22,28 +22,28 @@ func (plug *Youtube) Setup(write chan IRCMessage) {
 }
 
 func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
-	uri, err = getFirstMatch(plug.match, candidate)
+	uri, err = GetFirstMatch(plug.match, candidate)
 	if err != nil {
 		uri = nil
 		return
 	}
-	full := "http://" + *uri
+	full := "http://www.youtube.com/watch?v=" + *uri
 	uri = &full
 	return
 }
 
 func (plug Youtube) Write(msg *IRCMessage, body *string) (err error) {
-	title, err := getFirstMatch(plug.title, body)
+	title, err := GetFirstMatch(plug.title, body)
 	if err != nil {
 		return
 	}
 
-	user, err := getFirstMatch(plug.user, body)
+	user, err := GetFirstMatch(plug.user, body)
 	if err != nil {
 		return
 	}
 
-	_, notFound := getFirstMatch(plug.spoiler, title)
+	_, notFound := GetFirstMatch(plug.spoiler, title)
 	if notFound != nil {
 		plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,
 			Msg: "[YouTube] " + html.UnescapeString(*title+" uploaded by "+*user)}

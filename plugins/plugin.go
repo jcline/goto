@@ -39,12 +39,13 @@ func getMatch(re *regexp.Regexp, matchee *string) (match [][]string, err error) 
 	match = re.FindAllStringSubmatch(*matchee, -1)
 	if len(match) < 1 {
 		err = errors.New("Could not match")
+		log.Println(*matchee)
 		return
 	}
 	return
 }
 
-func getFirstMatch(re *regexp.Regexp, matchee *string) (match *string, err error) {
+func GetFirstMatch(re *regexp.Regexp, matchee *string) (match *string, err error) {
 	match = nil
 	matches, err := getMatch(re, matchee)
 	if err != nil {
@@ -53,6 +54,7 @@ func getFirstMatch(re *regexp.Regexp, matchee *string) (match *string, err error
 
 	if len(matches[0]) < 2 {
 		err = errors.New("Could not match")
+		log.Println(*matchee)
 		return
 	}
 	match = &matches[0][1]

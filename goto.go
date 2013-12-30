@@ -237,7 +237,7 @@ func main() {
 		prepared.When = time.Now()
 
 		// half assed filtering
-		_, notFound := getFirstMatch(matchSpoilers, &prepared.Msg)
+		_, notFound := plug.GetFirstMatch(matchSpoilers, &prepared.Msg)
 		if notFound != nil {
 			for _, plugin := range plugins {
 				if plugin.Match().MatchString(prepared.Msg) {
@@ -298,15 +298,4 @@ func getMsgInfo(msg string) (*plug.IRCMessage, error) {
 	imsg.Channel = match[0][2]
 	imsg.Msg = match[0][3]
 	return imsg, nil
-}
-
-func getFirstMatch(re *regexp.Regexp, matchee *string) (*string, error) {
-	match := re.FindAllStringSubmatch(*matchee, -1)
-	if len(match) < 1 {
-		return nil, errors.New("Could not match")
-	}
-	if len(match[0]) < 2 {
-		return nil, errors.New("Could not match")
-	}
-	return &match[0][1], nil
 }

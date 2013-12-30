@@ -20,7 +20,7 @@ func (plug *AmiAmi) Setup(write chan IRCMessage) {
 }
 
 func (plug *AmiAmi) FindUri(candidate *string) (uri *string, err error) {
-	uri, err = getFirstMatch(plug.match, candidate)
+	uri, err = GetFirstMatch(plug.match, candidate)
 	if err != nil {
 		uri = nil
 		return
@@ -31,7 +31,7 @@ func (plug *AmiAmi) FindUri(candidate *string) (uri *string, err error) {
 }
 
 func (plug AmiAmi) Write(msg *IRCMessage, body *string) (err error) {
-	title, err := getFirstMatch(plug.title, body)
+	title, err := GetFirstMatch(plug.title, body)
 	if err != nil {
 		return
 	}

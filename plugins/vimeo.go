@@ -25,7 +25,7 @@ func (plug *Vimeo) Setup(write chan IRCMessage) {
 }
 
 func (plug *Vimeo) FindUri(candidate *string) (uri *string, err error) {
-	uri, err = getFirstMatch(plug.match, candidate)
+	uri, err = GetFirstMatch(plug.match, candidate)
 	if err != nil {
 		uri = nil
 		return
@@ -36,17 +36,17 @@ func (plug *Vimeo) FindUri(candidate *string) (uri *string, err error) {
 }
 
 func (plug Vimeo) Write(msg *IRCMessage, body *string) (err error) {
-	title, err := getFirstMatch(plug.title, body)
+	title, err := GetFirstMatch(plug.title, body)
 	if err != nil {
 		return
 	}
 
-	user, err := getFirstMatch(plug.user, body)
+	user, err := GetFirstMatch(plug.user, body)
 	if err != nil {
 		return
 	}
 
-	_, notFound := getFirstMatch(plug.spoiler, title)
+	_, notFound := GetFirstMatch(plug.spoiler, title)
 	if notFound != nil {
 		plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,
 			Msg: "[Vimeo] " + html.UnescapeString(*title+" uploaded by "+*user)}

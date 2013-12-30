@@ -59,13 +59,13 @@ func (plug *Mal) Setup(write chan IRCMessage) {
 }
 
 func (plug *Mal) FindUri(candidate *string) (uri *string, err error) {
-	terms, err := getFirstMatch(plug.match, candidate)
+	terms, err := GetFirstMatch(plug.match, candidate)
 	if err != nil {
 		uri = nil
 		return
 	}
 
-	plug.searchType, err = getFirstMatch(plug.typeMatch, candidate)
+	plug.searchType, err = GetFirstMatch(plug.typeMatch, candidate)
 	if err != nil {
 		uri = nil
 		return
@@ -96,7 +96,7 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 
 	var resultString = ""
 	var nsfw = false
-	reference, _ := getFirstMatch(plug.match, &msg.Msg)
+	reference, _ := GetFirstMatch(plug.match, &msg.Msg)
 
 	for i, _ := range r {
 		r[i].Title = html.UnescapeString(r[i].Title)
