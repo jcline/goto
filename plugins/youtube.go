@@ -12,7 +12,7 @@ type Youtube struct {
 
 func (plug *Youtube) Setup(write chan IRCMessage) {
 	plug.write = write
-	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(?:youtu(?:\.be|be\.com)/(?:v/|)(\S+))`)
+	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(?:youtu(?:\.be|be\.com)/(?:v/|watch\?v=|)(\S+))`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	plug.title = regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
 	plug.user = regexp.MustCompile(`.*<a[^>]+feature=watch[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
