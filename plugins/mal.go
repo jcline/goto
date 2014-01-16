@@ -1,34 +1,48 @@
 package plugins
 
 import (
-	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"github.com/jcline/DamerauLevenshteinDistance"
 	"html"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
-	"strings"
+	//"strings"
 )
 
-type results []result
+type entries []entry
 type result struct {
-	distance, Id                  int
-	Classification, Title, search string
-	computed                      bool
+	Entries entries `xml:"entry"`
 }
 
-func (r results) Len() int {
+type entry struct {
+	Title    string `xml:"title"`
+	Id       int    `xml:"id"`
+	distance int
+	search   string
+	computed bool
+}
+
+type MalConf struct {
+	User string `json:"user"`
+	Password string `json:"password"`
+}
+
+func (r entries) Len() int {
 	return len(r)
 }
 
-func (r results) Swap(i, j int) {
+func (r entries) Swap(i, j int) {
 	r[i], r[j] = r[j], r[i]
 }
 
-func (r results) Less(i, j int) bool {
+func (r entries) Less(i, j int) bool {
 	if !r[i].computed {
 		r[i].distance = DamerauLevenshteinDistance.Distance(r[i].search, r[i].Title)
 		r[i].computed = true
@@ -72,7 +86,7 @@ func (plug *Mal) FindUri(candidate *string) (uri *string, err error) {
 		return
 	}
 
-	full := "http://mal-api.com/" + *plug.searchType + "/search?q=" + url.QueryEscape(*terms)
+	full := "http://myanimelist.net/api/" + *plug.searchType + "/search.xml?q=" + url.QueryEscape(*terms)
 	plug.terms = terms
 	uri = &full
 	fmt.Println(plug)
@@ -87,8 +101,11 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 		return
 	}
 
-	var r results
-	err = json.Unmarshal([]byte(*body), &r)
+	fmt.Printf("%v\n", *body)
+	unescaped := html.UnescapeString(*body)
+	//fmt.Printf("%v\n", unescaped)
+	var r result
+	err = xml.Unmarshal([]byte(unescaped), &r)
 	if err != nil {
 		plug.write <- IRCMessage{Channel: msg.Channel, Msg: "┐('～`；)┌", User: msg.User, When: msg.When}
 		return
@@ -99,32 +116,36 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 	var nsfw = false
 	reference, _ := GetFirstMatch(plug.match, &msg.Msg)
 
-	for i, _ := range r {
-		r[i].Title = html.UnescapeString(r[i].Title)
-		r[i].search = *reference
-		r[i].computed = false
+	for _, e := range r.Entries {
+		//r[i].Title = html.UnescapeString(r[i].Title)
+		e.search = *reference
+		e.computed = false
 	}
-	sort.Sort(r)
+	sort.Sort(r.Entries)
 
 	length := 2
-	if len(r) < length {
-		length = len(r)
+	if len(r.Entries) < length {
+		length = len(r.Entries)
 	}
-	for count, result := range r {
+	for count, result := range r.Entries {
 		if *plug.searchType == "anime" {
-			class := result.Classification
-			if class != "" {
-				if strings.Contains(class, "Rx") ||
-					strings.Contains(class, "R+") ||
-					strings.Contains(class, "Hentai") {
+			/*
+				class := result.Classification
+				if class != "" {
+					if strings.Contains(class, "Rx") ||
+						strings.Contains(class, "R+") ||
+						strings.Contains(class, "Hentai") {
+						nsfw = true
+					}
+					class = " [Rating " + class + "]"
+					nsfw = true
+				} else {
 					nsfw = true
 				}
-				class = " [Rating " + class + "]"
-			} else {
-				nsfw = true
-			}
+			*/
+			nsfw = true
 
-			resultString += result.Title + class + " http://myanimelist.net/" + *plug.searchType + "/" + strconv.Itoa(result.Id) + "  "
+			resultString += result.Title + /*class + */ " http://myanimelist.net/" + *plug.searchType + "/" + strconv.Itoa(result.Id) + "  "
 		} else {
 			resultString += result.Title + " http://myanimelist.net/" + *plug.searchType + "/" + strconv.Itoa(result.Id) + "  "
 			nsfw = true
@@ -138,7 +159,7 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 		resultString = "NSFW " + resultString
 	}
 
-	if len(r) > 3 {
+	if len(r.Entries) > 3 {
 		resultString += "More: " + "http://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms)
 	}
 
@@ -152,4 +173,43 @@ func (plug Mal) Match() *regexp.Regexp {
 
 func (plug Mal) Event() chan IRCMessage {
 	return plug.event
+}
+
+func malScrapeAndSend(plug scrapePlugin, user string, password string) {
+	var f = func(msg IRCMessage) {
+		uri, err := plug.FindUri(&msg.Msg)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		client := &http.Client{}
+		request, err := http.NewRequest("GET", *uri, nil)
+		request.SetBasicAuth(user, password)
+		resp, err := client.Do(request)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		defer resp.Body.Close()
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		body := string(bodyBytes)
+
+		err = plug.Write(&msg, &body)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+
+	go func() {
+		for msg := range plug.Event() {
+			go f(msg)
+		}
+	}()
 }
