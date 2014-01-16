@@ -18,6 +18,12 @@ func TestYoutubeMatchUri(t *testing.T) {
 		{"https://youtube.com", false},
 		{"https://www.youtube.com", false},
 		{"https://youtu.be", false},
+		{"http://youtube.com/channel/UCeBMccz-PDZf6OB4aV6a3eA?feature=g-high", false},
+		{"http://www.youtube.com/channel/UCeBMccz-PDZf6OB4aV6a3eA?feature=g-high", false},
+		{"http://youtu.be/channel/UCeBMccz-PDZf6OB4aV6a3eA?feature=g-high", false},
+		{"https://youtube.com/channel/UCeBMccz-PDZf6OB4aV6a3eA?feature=g-high", false},
+		{"https://www.youtube.com/channel/UCeBMccz-PDZf6OB4aV6a3eA?feature=g-high", false},
+		{"https://youtu.be/channel/UCeBMccz-PDZf6OB4aV6a3eA?feature=g-high", false},
 		{"http://youtube.com/v/O2rGTXHvPCQ", true},
 		{"http://youtu.be/v/O2rGTXHvPCQ", true},
 		{"http://www.youtube.com/v/O2rGTXHvPCQ", true},
@@ -31,6 +37,7 @@ func TestYoutubeMatchUri(t *testing.T) {
 		{"https://youtu.be/v/O2rGTXHvPCQ&hl=en_US&fs=1&", true},
 		{"https://www.youtube.com/v/O2rGTXHvPCQ&hl=en_US&fs=1&", true},
 		{"2013/12/30 12:17:43 :user!~user@127.0.0.1 PRIVMSG #channel:user everyone knows https://www.youtube.com/v/O2rGTXHvPCQ&hl=en_US&fs=1& is the one true irc client", true},
+		{"https://www.youtube.com/watch?feature=player_detailpage&v=WiDgeNBsMEA", true},
 	}
 
 	for _, test := range uris {
@@ -56,6 +63,7 @@ func TestYoutubeFindUri(t *testing.T) {
 		{"http://www.youtube.com/v/O2rGTXHvPCQ&hl=en_US&fs=1&", "http://www.youtube.com/watch?v=O2rGTXHvPCQ&hl=en_US&fs=1&", false},
 		{"http://www.youtube.com/watch?v=-5wpm-gesOY", "http://www.youtube.com/watch?v=-5wpm-gesOY", false},
 		{"http://youtu.be/-5wpm-gesOY", "http://www.youtube.com/watch?v=-5wpm-gesOY", false},
+		{"https://www.youtube.com/watch?feature=player_detailpage&v=WiDgeNBsMEA", "http://www.youtube.com/watch?v=WiDgeNBsMEA", false},
 	}
 
 	for _, test := range uris {

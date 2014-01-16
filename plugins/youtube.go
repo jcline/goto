@@ -1,7 +1,10 @@
 package plugins
 
 import (
+	"errors"
 	"html"
+	"net/url"
+	"path"
 	"regexp"
 )
 
@@ -12,7 +15,7 @@ type Youtube struct {
 
 func (plug *Youtube) Setup(write chan IRCMessage) {
 	plug.write = write
-	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(?:youtu(?:\.be|be\.com)/(?:v/|watch\?v=|)(\S+))`)
+	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(?:youtu(?:\.be|be\.com)(?:/v/|/watch\?v=|/)([^\s/]+))(?: |$)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	plug.title = regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
 	plug.user = regexp.MustCompile(`.*<a[^>]+feature=watch[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
@@ -22,13 +25,34 @@ func (plug *Youtube) Setup(write chan IRCMessage) {
 }
 
 func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
-	uri, err = GetFirstMatch(plug.match, candidate)
+	parsed, err := url.Parse(*candidate)
 	if err != nil {
 		uri = nil
 		return
 	}
-	full := "http://www.youtube.com/watch?v=" + *uri
-	uri = &full
+
+	if ok, _ := path.Match("/v/*", parsed.Path); ok {
+		_, file := path.Split(parsed.Path)
+	  full := "http://www.youtube.com/watch?v=" + file
+		uri = &full
+	} else if ok, _ = path.Match("/watch", parsed.Path); ok {
+		query := parsed.Query()
+
+		val, ok := query["v"]
+		if !ok || len(val) < 1 {
+			err = errors.New("Could not find video id");
+			return
+		}
+
+	  full := "http://www.youtube.com/watch?v=" + val[0]
+		uri = &full
+	} else if ok, _ = path.Match("/*", parsed.Path); ok {
+		// This condition must come last because it will match those above it as well
+		_, file := path.Split(parsed.Path)
+	  full := "http://www.youtube.com/watch?v=" + file
+		uri = &full
+	}
+
 	return
 }
 
