@@ -10,7 +10,7 @@ type Plamoya struct {
 	spoiler, title, user *regexp.Regexp
 }
 
-func (plug *Plamoya) Setup(write chan IRCMessage) {
+func (plug *Plamoya) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
 	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(plamoya.com/\S+)`)
 	plug.title = regexp.MustCompile(`.*<title>([^<]+) \([^)<:]+\) [^:<]+ : PLAMOYA</title>.*`)

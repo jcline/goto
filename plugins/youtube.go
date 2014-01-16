@@ -13,7 +13,7 @@ type Youtube struct {
 	spoiler, title, user *regexp.Regexp
 }
 
-func (plug *Youtube) Setup(write chan IRCMessage) {
+func (plug *Youtube) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
 	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(?:youtu(?:\.be|be\.com)(?:/v/|/watch\?v=|/)([^\s/]+))(?: |$)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)

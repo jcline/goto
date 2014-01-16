@@ -11,7 +11,7 @@ type Reddit struct {
 	spoiler, title *regexp.Regexp
 }
 
-func (plug *Reddit) Setup(write chan IRCMessage) {
+func (plug *Reddit) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
 	plug.match = regexp.MustCompile(`(?:http://|)(?:www\.|https://pay\.|)redd(?:\.it|it\.com)/(?:r/(?:[^/ ]|\S)+/comments/|)([a-z0-9]{5,8})/?(?:[ .]+|\z)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)

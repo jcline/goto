@@ -47,14 +47,15 @@ type Mal struct {
 	searchType, terms         *string
 }
 
-func (plug *Mal) Setup(write chan IRCMessage) {
+func (plug *Mal) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
 	plug.match = regexp.MustCompile(`^!(?:anime|manga) (.+)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	plug.title = regexp.MustCompile(`.*<title>(.+)</title>.*`)
 	plug.typeMatch = regexp.MustCompile(`^!(anime|manga) .+`)
 	plug.event = make(chan IRCMessage, 1000)
-	scrapeAndSend(plug)
+
+	malScrapeAndSend(plug, conf.Mal.User, conf.Mal.Password)
 	return
 }
 

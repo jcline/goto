@@ -52,6 +52,7 @@ type Settings struct {
 	UserName string   `json:"userName"`
 	RealName string   `json:"realName"`
 	Channels []string `json:"channels"`
+	Plugins plug.PluginConf `json:"plugin_conf"`
 }
 
 var ErrConfNotFound = errors.New("Conf does not exist")
@@ -220,7 +221,7 @@ func main() {
 	plugins = append(plugins, new(plug.Youtube))
 
 	for _, plugin := range plugins {
-		plugin.Setup(writeMessage)
+		plugin.Setup(writeMessage, conf.Plugins)
 	}
 
 	auth(con, writeMessage, conf.UserName)

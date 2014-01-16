@@ -10,7 +10,7 @@ type MyFigureCollection struct {
 	spoiler, title, user *regexp.Regexp
 }
 
-func (plug *MyFigureCollection) Setup(write chan IRCMessage) {
+func (plug *MyFigureCollection) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
 	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(myfigurecollection.net/item/\S+)`)
 	plug.title = regexp.MustCompile(`.*<meta name="description" content="([^"]+)".*/>.*`)

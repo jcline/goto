@@ -10,7 +10,7 @@ type Vimeo struct {
 	spoiler, title, user *regexp.Regexp
 }
 
-func (plug *Vimeo) Setup(write chan IRCMessage) {
+func (plug *Vimeo) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
 	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(vimeo.com/\S+)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)

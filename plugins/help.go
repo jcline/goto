@@ -11,7 +11,7 @@ type Help struct {
 	help map[string]string
 }
 
-func (plug *Help) Setup(write chan IRCMessage) {
+func (plug *Help) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
 	plug.match = regexp.MustCompile(`^help(.*)`)
 	plug.event = make(chan IRCMessage, 1000)

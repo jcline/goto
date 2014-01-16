@@ -9,7 +9,7 @@ type AmiAmi struct {
 	discount, title *regexp.Regexp
 }
 
-func (plug *AmiAmi) Setup(write chan IRCMessage) {
+func (plug *AmiAmi) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
 	plug.discount = regexp.MustCompile(`[0-9]+\%OFF `)
 	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)amiami.com/((?:[^/]|\S)+/detail/\S+)`)

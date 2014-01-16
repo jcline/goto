@@ -16,10 +16,14 @@ type IRCMessage struct {
 	When    time.Time
 }
 
+type PluginConf struct {
+	Mal MalConf `json:"mal"`
+}
+
 type Plugin interface {
 	Match() *regexp.Regexp
 	Event() chan IRCMessage
-	Setup(chan IRCMessage)
+	Setup(chan IRCMessage, PluginConf)
 }
 
 type scrapePlugin interface {
