@@ -19,7 +19,7 @@ func (plug *Help) Setup(write chan IRCMessage, conf PluginConf) {
 	// TODO: Provide a way to specify bot names at this level
 	regexPrefix := `(?:^Laala[,:~]{0,1} `
 	regexPostfix := `)`
-	regexes := []string {
+	regexes := []string{
 		regexPrefix + `(?:please[,] ){0,1}tell me (?P<command>about) yourself(?:[,] please){0,1}` + regexPostfix,
 		regexPrefix + `(?:please |would you please ){0,1}(?P<command>help) me` + regexPostfix,
 		regexPrefix + `how do I search for (?P<command>anime|manga)` + regexPostfix,
@@ -28,9 +28,9 @@ func (plug *Help) Setup(write chan IRCMessage, conf PluginConf) {
 
 	plug.match = regexp.MustCompile(`(?i:` + strings.Join(regexes, `|`) + `)`)
 
-	plug.help = map[string]string {
+	plug.help = map[string]string{
 		"about": "No! I want to leave this planet!",
-		"help": "Please ask me what you would like to know~",
+		"help":  "Please ask me what you would like to know~",
 		"anime": "!anime Galaxy Express 999",
 		"manga": "!manga Galaxy Express 999",
 	}

@@ -4,14 +4,14 @@ import (
 	"testing"
 )
 
-func TestHelpMatch(t* testing.T) {
+func TestHelpMatch(t *testing.T) {
 	plug := Help{}
 	plug.Setup(make(chan IRCMessage))
 
 	tests := []struct {
-		msg string
+		msg     string
 		matched bool
-	} {
+	}{
 		{"Laala, would you please help me", true},
 		{"Laala, please help me", true},
 		{"Laala, help me", true},

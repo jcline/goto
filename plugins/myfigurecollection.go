@@ -49,4 +49,3 @@ func (plug MyFigureCollection) Match() *regexp.Regexp {
 func (plug MyFigureCollection) Event() chan IRCMessage {
 	return plug.event
 }
-

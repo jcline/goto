@@ -1,10 +1,10 @@
 package main
 
 import (
-	plug "github.com/jcline/goto/plugins"
 	"encoding/json"
 	"errors"
 	"fmt"
+	plug "github.com/jcline/goto/plugins"
 	"github.com/jcline/goty"
 	"io/ioutil"
 	"log"
@@ -48,11 +48,11 @@ func exists(path string) (bool, error) {
 }
 
 type Settings struct {
-	Server   string   `json:"server"`
-	UserName string   `json:"userName"`
-	RealName string   `json:"realName"`
-	Channels []string `json:"channels"`
-	Plugins plug.PluginConf `json:"plugin_conf"`
+	Server   string          `json:"server"`
+	UserName string          `json:"userName"`
+	RealName string          `json:"realName"`
+	Channels []string        `json:"channels"`
+	Plugins  plug.PluginConf `json:"plugin_conf"`
 }
 
 var ErrConfNotFound = errors.New("Conf does not exist")

@@ -53,9 +53,9 @@ func TestYoutubeFindUri(t *testing.T) {
 	youtube.Setup(make(chan IRCMessage))
 
 	uris := []struct {
-		uri string
+		uri    string
 		result string
-		err bool
+		err    bool
 	}{
 		{"https://www.youtube.com/v/O2rGTXHvPCQ&hl=en_US&fs=1&", "http://www.youtube.com/watch?v=O2rGTXHvPCQ&hl=en_US&fs=1&", false},
 		{"https://www.youtube.com/watch?v=-5wpm-gesOY", "http://www.youtube.com/watch?v=-5wpm-gesOY", false},

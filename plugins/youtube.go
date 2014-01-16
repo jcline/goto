@@ -33,23 +33,23 @@ func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
 
 	if ok, _ := path.Match("/v/*", parsed.Path); ok {
 		_, file := path.Split(parsed.Path)
-	  full := "http://www.youtube.com/watch?v=" + file
+		full := "http://www.youtube.com/watch?v=" + file
 		uri = &full
 	} else if ok, _ = path.Match("/watch", parsed.Path); ok {
 		query := parsed.Query()
 
 		val, ok := query["v"]
 		if !ok || len(val) < 1 {
-			err = errors.New("Could not find video id");
+			err = errors.New("Could not find video id")
 			return
 		}
 
-	  full := "http://www.youtube.com/watch?v=" + val[0]
+		full := "http://www.youtube.com/watch?v=" + val[0]
 		uri = &full
 	} else if ok, _ = path.Match("/*", parsed.Path); ok {
 		// This condition must come last because it will match those above it as well
 		_, file := path.Split(parsed.Path)
-	  full := "http://www.youtube.com/watch?v=" + file
+		full := "http://www.youtube.com/watch?v=" + file
 		uri = &full
 	}
 
@@ -73,7 +73,7 @@ func (plug Youtube) Write(msg *IRCMessage, body *string) (err error) {
 			Msg: "[YouTube] " + html.UnescapeString(*title+" uploaded by "+*user)}
 	} else {
 		plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,
-		Msg: "[YouTube] [[Title omitted due to possible spoilers]] uploaded by " + *user}
+			Msg: "[YouTube] [[Title omitted due to possible spoilers]] uploaded by " + *user}
 	}
 
 	return

@@ -49,4 +49,3 @@ func (plug Plamoya) Match() *regexp.Regexp {
 func (plug Plamoya) Event() chan IRCMessage {
 	return plug.event
 }
-
