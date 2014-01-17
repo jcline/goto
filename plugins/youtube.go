@@ -15,7 +15,7 @@ type Youtube struct {
 
 func (plug *Youtube) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
-	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(?:youtu(?:\.be|be\.com)(?:/v/|/watch\?v=|/)([^\s/]+))(?: |$)`)
+	plug.match = regexp.MustCompile(`((?:https?://|)(?:www\.|)(?:youtu(?:\.be|be\.com)(?:/v/|/watch\?v=|/)[^\s/]+))(?: |$)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	plug.title = regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
 	plug.user = regexp.MustCompile(`.*<a[^>]+feature=watch[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
@@ -25,7 +25,12 @@ func (plug *Youtube) Setup(write chan IRCMessage, conf PluginConf) {
 }
 
 func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
-	parsed, err := url.Parse(*candidate)
+	uri, err = GetFirstMatch(plug.match, candidate)
+	if err != nil {
+		return
+	}
+
+	parsed, err := url.Parse(*uri)
 	if err != nil {
 		return
 	}

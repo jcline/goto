@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"log"
 	"testing"
 )
 
@@ -66,11 +67,15 @@ func TestYoutubeFindUri(t *testing.T) {
 		{"http://youtu.be/-5wpm-gesOY", "http://www.youtube.com/watch?v=-5wpm-gesOY", false},
 		{"https://www.youtube.com/watch?feature=player_detailpage&v=WiDgeNBsMEA", "http://www.youtube.com/watch?v=WiDgeNBsMEA", false},
 		{"https://www.youtube.com/watch?v=E-5cB2rUnvk", "http://www.youtube.com/watch?v=E-5cB2rUnvk", false},
+		{"http://www.youtube.com/watch?v=YjvTy2u9qxE", "http://www.youtube.com/watch?v=YjvTy2u9qxE", false},
+		{"test http://www.youtube.com/watch?v=YjvTy2u9qxE", "http://www.youtube.com/watch?v=YjvTy2u9qxE", false},
+		{"test http://www.youtube.com/watch?v=YjvTy2u9qxE test", "http://www.youtube.com/watch?v=YjvTy2u9qxE", false},
 		{"cat", "", true},
 	}
 
 	for _, test := range uris {
 		result, err := youtube.FindUri(&test.uri)
+		log.Println(err)
 		errResult := err != nil
 		if errResult != test.err {
 			t.Error(test.uri, "expected errResult to be", test.err, "but got", errResult, ":", err)
