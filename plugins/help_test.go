@@ -6,7 +6,7 @@ import (
 
 func TestHelpMatch(t *testing.T) {
 	plug := Help{}
-	plug.Setup(make(chan IRCMessage))
+	plug.Setup(make(chan IRCMessage), PluginConf{})
 
 	tests := []struct {
 		msg     string

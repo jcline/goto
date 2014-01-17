@@ -6,7 +6,7 @@ import (
 
 func TestVimeoMatchUri(t *testing.T) {
 	vimeo := Vimeo{}
-	vimeo.Setup(make(chan IRCMessage))
+	vimeo.Setup(make(chan IRCMessage), PluginConf{})
 
 	uris := []struct {
 		uri     string
@@ -30,7 +30,7 @@ func TestVimeoMatchUri(t *testing.T) {
 
 func TestVimeoMatchTitle(t *testing.T) {
 	vimeo := Vimeo{}
-	vimeo.Setup(make(chan IRCMessage))
+	vimeo.Setup(make(chan IRCMessage), PluginConf{})
 
 	html :=
 		`
@@ -57,7 +57,7 @@ func TestVimeoMatchTitle(t *testing.T) {
 
 func TestVimeoMatchUser(t *testing.T) {
 	vimeo := Vimeo{}
-	vimeo.Setup(make(chan IRCMessage))
+	vimeo.Setup(make(chan IRCMessage), PluginConf{})
 
 	html :=
 		`

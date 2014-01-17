@@ -6,7 +6,7 @@ import (
 
 func TestYoutubeMatchUri(t *testing.T) {
 	youtube := Youtube{}
-	youtube.Setup(make(chan IRCMessage))
+	youtube.Setup(make(chan IRCMessage), PluginConf{})
 
 	uris := []struct {
 		uri     string
@@ -38,6 +38,7 @@ func TestYoutubeMatchUri(t *testing.T) {
 		{"https://www.youtube.com/v/O2rGTXHvPCQ&hl=en_US&fs=1&", true},
 		{"2013/12/30 12:17:43 :user!~user@127.0.0.1 PRIVMSG #channel:user everyone knows https://www.youtube.com/v/O2rGTXHvPCQ&hl=en_US&fs=1& is the one true irc client", true},
 		{"https://www.youtube.com/watch?feature=player_detailpage&v=WiDgeNBsMEA", true},
+		{"https://www.youtube.com/watch?v=E-5cB2rUnvk", true},
 	}
 
 	for _, test := range uris {
@@ -50,7 +51,7 @@ func TestYoutubeMatchUri(t *testing.T) {
 
 func TestYoutubeFindUri(t *testing.T) {
 	youtube := Youtube{}
-	youtube.Setup(make(chan IRCMessage))
+	youtube.Setup(make(chan IRCMessage), PluginConf{})
 
 	uris := []struct {
 		uri    string
@@ -64,6 +65,7 @@ func TestYoutubeFindUri(t *testing.T) {
 		{"http://www.youtube.com/watch?v=-5wpm-gesOY", "http://www.youtube.com/watch?v=-5wpm-gesOY", false},
 		{"http://youtu.be/-5wpm-gesOY", "http://www.youtube.com/watch?v=-5wpm-gesOY", false},
 		{"https://www.youtube.com/watch?feature=player_detailpage&v=WiDgeNBsMEA", "http://www.youtube.com/watch?v=WiDgeNBsMEA", false},
+		{"https://www.youtube.com/watch?v=E-5cB2rUnvk", "http://www.youtube.com/watch?v=E-5cB2rUnvk", false},
 	}
 
 	for _, test := range uris {
