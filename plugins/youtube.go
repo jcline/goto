@@ -51,6 +51,8 @@ func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
 		_, file := path.Split(parsed.Path)
 		full := "http://www.youtube.com/watch?v=" + file
 		uri = &full
+	} else {
+		err = errors.New("Could not find URI")
 	}
 
 	return

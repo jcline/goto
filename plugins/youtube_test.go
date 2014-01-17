@@ -66,6 +66,7 @@ func TestYoutubeFindUri(t *testing.T) {
 		{"http://youtu.be/-5wpm-gesOY", "http://www.youtube.com/watch?v=-5wpm-gesOY", false},
 		{"https://www.youtube.com/watch?feature=player_detailpage&v=WiDgeNBsMEA", "http://www.youtube.com/watch?v=WiDgeNBsMEA", false},
 		{"https://www.youtube.com/watch?v=E-5cB2rUnvk", "http://www.youtube.com/watch?v=E-5cB2rUnvk", false},
+		{"cat", "", true},
 	}
 
 	for _, test := range uris {
@@ -75,7 +76,7 @@ func TestYoutubeFindUri(t *testing.T) {
 			t.Error(test.uri, "expected errResult to be", test.err, "but got", errResult, ":", err)
 		}
 
-		if *result != test.result {
+		if result != nil && *result != test.result {
 			t.Error(test.uri, "expected", test.result, "but got", *result)
 		}
 	}
