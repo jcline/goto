@@ -27,7 +27,6 @@ func (plug *Youtube) Setup(write chan IRCMessage, conf PluginConf) {
 func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
 	parsed, err := url.Parse(*candidate)
 	if err != nil {
-		uri = nil
 		return
 	}
 
