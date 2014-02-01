@@ -63,7 +63,7 @@ type Mal struct {
 
 func (plug *Mal) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
-	plug.match = regexp.MustCompile(`^!(?:anime|manga) (.+)`)
+	plug.match = regexp.MustCompile(`^!(?:anime|manga) (.{1,75})`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	plug.title = regexp.MustCompile(`.*<title>(.+)</title>.*`)
 	plug.typeMatch = regexp.MustCompile(`^!(anime|manga) .+`)
