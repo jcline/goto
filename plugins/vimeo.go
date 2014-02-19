@@ -1,9 +1,25 @@
 package plugins
 
 import (
+	"log"
+	"encoding/json"
 	"html"
 	"regexp"
+	"errors"
+	"strings"
 )
+
+var VimeoNoResultsError = errors.New("Vimeo: No results")
+var VimeoEmptyResultsError = errors.New("Vimeo: Some of the fields were empty :(")
+
+type resultWrapper struct {
+	Results []jsonResult
+}
+
+type jsonResult struct {
+	User string `json:"user_name"`
+	Title string `json:"title"`
+}
 
 type Vimeo struct {
 	plugin
@@ -12,7 +28,7 @@ type Vimeo struct {
 
 func (plug *Vimeo) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
-	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(vimeo.com/\S+)`)
+	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(?:vimeo.com/)(\S+)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	//plug.title = regexp.MustCompile(`.*<title>(.+)(?: on Vimeo){1}</title>.*`)
 	plug.title = regexp.MustCompile(`<[^>]*meta[^>]*property="og:title"[^>]*content="(.+)"[^>]*>`)
@@ -30,29 +46,38 @@ func (plug *Vimeo) FindUri(candidate *string) (uri *string, err error) {
 		uri = nil
 		return
 	}
-	full := "http://" + *uri
+	full := "http://vimeo.com/api/v2/video/" + *uri + ".json"
 	uri = &full
 	return
 }
 
 func (plug Vimeo) Write(msg *IRCMessage, body *string) (err error) {
-	title, err := GetFirstMatch(plug.title, body)
+	var result []jsonResult
+	log.Println(*body)
+	err = json.Unmarshal([]byte(*body), &result)
 	if err != nil {
 		return
 	}
 
-	user, err := GetFirstMatch(plug.user, body)
-	if err != nil {
+	if len(result) != 1 {
+		err = VimeoNoResultsError
 		return
 	}
 
-	_, notFound := GetFirstMatch(plug.spoiler, title)
+	title := strings.TrimSpace(result[0].Title)
+	user := strings.TrimSpace(result[0].User)
+	if title == "" || user == "" {
+		err = VimeoEmptyResultsError
+		return
+	}
+
+	_, notFound := GetFirstMatch(plug.spoiler, &title)
 	if notFound != nil {
 		plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,
-			Msg: "[Vimeo] " + html.UnescapeString(*title+" uploaded by "+*user)}
+			Msg: "[Vimeo] " + html.UnescapeString(title+" uploaded by "+user)}
 	} else {
 		plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,
-			Msg: "[Vimeo] [[Title omitted due to possible spoilers]] uploaded by " + *user}
+			Msg: "[Vimeo] [[Title omitted due to possible spoilers]] uploaded by " + user}
 	}
 
 	return
