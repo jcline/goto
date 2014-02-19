@@ -23,18 +23,13 @@ type jsonResult struct {
 
 type Vimeo struct {
 	plugin
-	spoiler, title, user *regexp.Regexp
+	spoiler *regexp.Regexp
 }
 
 func (plug *Vimeo) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
 	plug.match = regexp.MustCompile(`(?:https?://|)(?:www\.|)(?:vimeo.com/)(\S+)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
-	//plug.title = regexp.MustCompile(`.*<title>(.+)(?: on Vimeo){1}</title>.*`)
-	plug.title = regexp.MustCompile(`<[^>]*meta[^>]*property="og:title"[^>]*content="(.+)"[^>]*>`)
-	//plug.user = regexp.MustCompile(`.*<div[^>]+(?: +itemtype="http://schema.org/Person" +|[^>]+?| +itemprop="author" +){3,}>(?s:.*?)<[^>]*meta[^>]*itemprop="name"[^>]*content="(.+)"[^>]*>.*`)
-	//plug.user = regexp.MustCompile(`<[^>]*meta[^>]*itemprop="name"[^>]*content="(.+)"[^>]*>`)
-	plug.user = regexp.MustCompile(`<a rel="author" href="/[^>]+?">(.+?)</a>`)
 	plug.event = make(chan IRCMessage, 1000)
 	scrapeAndSend(plug)
 	return
