@@ -96,69 +96,69 @@ func readConfig() (conf Settings, path string, err error) {
 	return
 }
 
-func createConfig(path string) (conf Settings, err error) {
+func getStr(prompt string, failurePrompt string, invalid func(string)bool) (result string, err error) {
+	result = ""
+	for {
+		log.Println(prompt)
+		_, err = fmt.Scanf("%s", &result)
+		if err != nil {
+			return
+		}
+		if invalid(result) {
+			log.Println(failurePrompt)
+		} else {
+			return
+		}
+	}
+}
+
+func createConfig(path string, useMal bool) (conf Settings, err error) {
 
 	_, err = exists(path)
 	log.Println(exists, err)
 	if err == ErrConfNotFound {
-		err = os.MkdirAll(filepath.Dir(path), 0644)
+		err = os.MkdirAll(filepath.Dir(path), 0755)
 		log.Println(path, ":", filepath.Dir(path))
 		if err != nil && !os.IsPermission(err) {
 			return
 		}
 	}
 
-	for {
-		log.Println("Server (e.g. irc.freenode.net:6666):")
-		_, err = fmt.Scanf("%s", &conf.Server)
-		if err != nil {
-			return
-		}
-		if !strings.Contains(conf.Server, ":") {
-			log.Println("You must include a port.")
-		} else {
-			break
-		}
+	isEmpty := func(s string) bool {
+		return strings.TrimSpace(s) == ""
 	}
 
-	for {
-		log.Println("User name:")
-		_, err = fmt.Scanf("%s", &conf.UserName)
-		if err != nil {
-			return
-		}
-		if conf.UserName == "" {
-			log.Println("User name must not be empty")
-		} else {
-			break
-		}
+	conf.Server, err = getStr("Server (e.g. irc.freenode.net:6666):", "You must include a port.", func(s string) bool { return !strings.Contains(s, ":") })
+	if err != nil {
+		return
 	}
 
-	for {
-		log.Println("Real name:")
-		_, err = fmt.Scanf("%s", &conf.RealName)
-		if err != nil {
-			return
-		}
-		if conf.RealName == "" {
-			log.Println("Real name must not be empty")
-		} else {
-			break
-		}
+	conf.UserName, err = getStr("User name:", "User name must not be empty", isEmpty)
+	if err != nil {
+		return
 	}
 
-	for {
-		log.Println("Channels to join (e.g. #chan1,#chan2 or #chan1):")
-		var channels string
-		_, err = fmt.Scanf("%s", &channels)
+	conf.RealName, err = getStr("Real name:", "Real name must not be empty", isEmpty)
+	if err != nil {
+		return
+	}
+
+	chans, err := getStr("Channels to join (e.g. #chan1,#chan2 or #chan1):", "You must provide at least one channel", func(s string) bool {
+		return isEmpty(s) || !strings.Contains(s, "#")
+	})
+	if err != nil {
+		return
+	}
+	conf.Channels = strings.Split(chans, ",")
+
+	if useMal {
+		conf.Plugins.Mal.User, err = getStr("MAL user name:", "User name must not be empty", isEmpty)
 		if err != nil {
 			return
 		}
-		if channels == "" || !strings.Contains(channels, "#") {
-			log.Println("You must provide at least one channel")
-		} else {
-			conf.Channels = strings.Split(channels, ",")
-			break
+		conf.Plugins.Mal.Password, err = getStr("MAL password:", "Password must not be empty", isEmpty)
+		if err != nil {
+			return
 		}
 	}
 
@@ -187,7 +187,7 @@ func main() {
 				log.Fatal(err)
 			}
 			if response == "y" || response == "Y" {
-				conf, err = createConfig(path)
+				conf, err = createConfig(path, true)
 				if err != nil {
 					log.Fatal(err)
 				}
