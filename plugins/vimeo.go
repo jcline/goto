@@ -1,11 +1,11 @@
 package plugins
 
 import (
-	"log"
 	"encoding/json"
-	"html"
-	"regexp"
 	"errors"
+	"html"
+	"log"
+	"regexp"
 	"strings"
 )
 
@@ -17,7 +17,7 @@ type resultWrapper struct {
 }
 
 type jsonResult struct {
-	User string `json:"user_name"`
+	User  string `json:"user_name"`
 	Title string `json:"title"`
 }
 

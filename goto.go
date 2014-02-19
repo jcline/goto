@@ -96,7 +96,7 @@ func readConfig() (conf Settings, path string, err error) {
 	return
 }
 
-func getStr(prompt string, failurePrompt string, invalid func(string)bool) (result string, err error) {
+func getStr(prompt string, failurePrompt string, invalid func(string) bool) (result string, err error) {
 	result = ""
 	for {
 		log.Println(prompt)
