@@ -199,6 +199,7 @@ func main() {
 		}
 	}
 
+	log.Println(conf)
 	user = conf.UserName
 	con, err := goty.Dial(conf.Server, conf.UserName, conf.RealName)
 	if err != nil {
