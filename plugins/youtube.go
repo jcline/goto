@@ -17,8 +17,8 @@ func (plug *Youtube) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
 	plug.match = regexp.MustCompile(`((?:https?://|)(?:www\.|)(?:youtu(?:\.be|be\.com)(?:/v/|/watch\?v=|/)[^\s/]+))(?: |$)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
-	plug.title = regexp.MustCompile(`.*<title>(.+)(?: - YouTube){1}</title>.*`)
-	plug.user = regexp.MustCompile(`.*<a[^>]+feature=watch[^>]+class="[^"]+yt-user-name[^>]+>([^<]+)</a>.*`)
+	plug.title = regexp.MustCompile(`<title>(.+) - YouTube</title>`)
+	plug.user = regexp.MustCompile(`<a[^>]+class="[^">]+yt-user-name[^">]+"[^>]+>([^<]+)</a>`)
 	plug.event = make(chan IRCMessage, 1000)
 	scrapeAndSend(plug)
 	return

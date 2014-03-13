@@ -84,3 +84,58 @@ func TestYoutubeFindUri(t *testing.T) {
 		}
 	}
 }
+
+func TestYoutubeMatchTitle(t *testing.T) {
+	youtube := Youtube{}
+	youtube.Setup(make(chan IRCMessage), PluginConf{})
+
+	html := []struct {
+		html, result string
+		err bool
+	}{
+		{"<title>Test - YouTube</title>", "Test", false},
+		{"<title>Test - YouTube - YouTube</title>", "Test - YouTube", false},
+		{"<title>Test - YouTube - Test - YouTube</title>", "Test - YouTube - Test", false},
+		{"garbage<title>Test - YouTube</title>garbage", "Test", false},
+		{"Test - YouTube</title>", "", true},
+		{"<title>Test - YouTube</title><link rel=\"search\" type=\"application/opensearchdescription+xml\" href=\"http://www.youtube.com/opensearch?locale=en_US\" title=\"YouTube Video Search\"><link rel=\"shortcut icon\" href=\"http://s.ytimg.com/yts/img/favicon-yay.ico\" type=\"image/x-icon\">     <link rel=\"icon\" href=\"//s.ytimg.com/yts/img/favicon_32-yay.png\" sizes=\"32x32\"><link rel=\"canonical\" href=\"http://www.youtube.com/watch?v=vidya\"><link rel=\"alternate\" media=\"handheld\" href=\"http://m.youtube.com/watch?v=vidya\"><link rel=\"alternate\" media=\"only screen and (max-width: 640px)\" href=\"http://m.youtube.com/watch?v=vidya\"><link rel=\"shortlink\" href=\"http://youtu.be/vidya\">      <meta name=\"title\" content=\"Test\">", "Test", false},
+	}
+
+	for _, test := range html {
+		result, err := GetFirstMatch(youtube.title, &test.html)
+		errResult := err != nil
+		if errResult != test.err {
+			t.Error(test.html, "expected errResult to be", test.err, "but got", errResult, ":", err)
+		}
+
+		if result != nil && *result != test.result {
+			t.Error(test.html, "expected", test.result, "but got", *result)
+		}
+	}
+
+}
+
+func TestYoutubeMatchUser(t *testing.T) {
+	youtube := Youtube{}
+	youtube.Setup(make(chan IRCMessage), PluginConf{})
+
+	html := []struct {
+		html, result string
+		err bool
+	}{
+		{"<a href=\"/user/AkiAkiSignal\" class=\"g-hovercard yt-uix-sessionlink yt-user-name \" data-sessionlink=\"feature=watch&amp;ei=7CAhU9X1OerKkwLz_YDYBw\" dir=\"ltr\" data-ytid=\"UCUxaYwnuATuhavEUdy3ELBQ\" data-name=\"watch\">Geoffrey Adams</a>", "Geoffrey Adams", false},
+	}
+
+	for _, test := range html {
+		result, err := GetFirstMatch(youtube.user, &test.html)
+		errResult := err != nil
+		if errResult != test.err {
+			t.Error(test.html, "expected errResult to be", test.err, "but got", errResult, ":", err)
+		}
+
+		if result != nil && *result != test.result {
+			t.Error(test.html, "expected", test.result, "but got", *result)
+		}
+	}
+
+}
