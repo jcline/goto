@@ -32,6 +32,7 @@ type entry struct {
 type MalConf struct {
 	User     string `json:"user"`
 	Password string `json:"password"`
+	UserAgent string `json:"user_agent"`
 }
 
 func (r entries) Len() int {
@@ -69,7 +70,7 @@ func (plug *Mal) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.typeMatch = regexp.MustCompile(`^!(anime|manga) .+`)
 	plug.event = make(chan IRCMessage, 1000)
 
-	malScrapeAndSend(plug, conf.Mal.User, conf.Mal.Password)
+	malScrapeAndSend(plug, conf.Mal)
 	return
 }
 
@@ -179,7 +180,7 @@ func (plug Mal) Event() chan IRCMessage {
 	return plug.event
 }
 
-func malScrapeAndSend(plug scrapePlugin, user string, password string) {
+func malScrapeAndSend(plug scrapePlugin, conf MalConf) {
 	var f = func(msg IRCMessage) {
 		uri, err := plug.FindUri(&msg.Msg)
 		if err != nil {
@@ -189,7 +190,8 @@ func malScrapeAndSend(plug scrapePlugin, user string, password string) {
 
 		client := &http.Client{}
 		request, err := http.NewRequest("GET", *uri, nil)
-		request.SetBasicAuth(user, password)
+		request.SetBasicAuth(conf.User, conf.Password)
+		request.Header.Set("User-Agent", conf.UserAgent)
 		resp, err := client.Do(request)
 		if err != nil {
 			log.Println(err)
