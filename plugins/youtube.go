@@ -35,6 +35,14 @@ func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
 		return
 	}
 
+	if parsed.Path == *uri {
+		newuri := "http://" + *uri
+		parsed, err = url.Parse(newuri)
+		if err != nil {
+			return
+		}
+	}
+
 	if ok, _ := path.Match("/v/*", parsed.Path); ok {
 		_, file := path.Split(parsed.Path)
 		full := "http://www.youtube.com/watch?v=" + file

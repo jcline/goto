@@ -30,8 +30,8 @@ type entry struct {
 }
 
 type MalConf struct {
-	User     string `json:"user"`
-	Password string `json:"password"`
+	User      string `json:"user"`
+	Password  string `json:"password"`
 	UserAgent string `json:"user_agent"`
 }
 

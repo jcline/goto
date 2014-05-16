@@ -39,6 +39,9 @@ func TestYoutubeMatchUri(t *testing.T) {
 		{"2013/12/30 12:17:43 :user!~user@127.0.0.1 PRIVMSG #channel:user everyone knows https://www.youtube.com/v/O2rGTXHvPCQ&hl=en_US&fs=1& is the one true irc client", true},
 		{"https://www.youtube.com/watch?feature=player_detailpage&v=WiDgeNBsMEA", true},
 		{"https://www.youtube.com/watch?v=E-5cB2rUnvk", true},
+		{"www.youtube.com/v/O2rGTXHvPCQ", true},
+		{"youtube.com/v/O2rGTXHvPCQ", true},
+		{"youtu.be/O2rGTXHvPCQ", true},
 	}
 
 	for _, test := range uris {
@@ -69,6 +72,9 @@ func TestYoutubeFindUri(t *testing.T) {
 		{"http://www.youtube.com/watch?v=YjvTy2u9qxE", "http://www.youtube.com/watch?v=YjvTy2u9qxE", false},
 		{"test http://www.youtube.com/watch?v=YjvTy2u9qxE", "http://www.youtube.com/watch?v=YjvTy2u9qxE", false},
 		{"test http://www.youtube.com/watch?v=YjvTy2u9qxE test", "http://www.youtube.com/watch?v=YjvTy2u9qxE", false},
+		{"www.youtube.com/v/O2rGTXHvPCQ", "http://www.youtube.com/watch?v=O2rGTXHvPCQ", false},
+		{"youtube.com/v/O2rGTXHvPCQ", "http://www.youtube.com/watch?v=O2rGTXHvPCQ", false},
+		{"youtu.be/O2rGTXHvPCQ", "http://www.youtube.com/watch?v=O2rGTXHvPCQ", false},
 		{"cat", "", true},
 	}
 
@@ -91,7 +97,7 @@ func TestYoutubeMatchTitle(t *testing.T) {
 
 	html := []struct {
 		html, result string
-		err bool
+		err          bool
 	}{
 		{"<title>Test - YouTube</title>", "Test", false},
 		{"<title>Test - YouTube - YouTube</title>", "Test - YouTube", false},
@@ -121,7 +127,7 @@ func TestYoutubeMatchUser(t *testing.T) {
 
 	html := []struct {
 		html, result string
-		err bool
+		err          bool
 	}{
 		{"<a href=\"/user/AkiAkiSignal\" class=\"g-hovercard yt-uix-sessionlink yt-user-name \" data-sessionlink=\"feature=watch&amp;ei=7CAhU9X1OerKkwLz_YDYBw\" dir=\"ltr\" data-ytid=\"UCUxaYwnuATuhavEUdy3ELBQ\" data-name=\"watch\">Geoffrey Adams</a>", "Geoffrey Adams", false},
 	}
