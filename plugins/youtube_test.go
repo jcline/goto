@@ -42,6 +42,8 @@ func TestYoutubeMatchUri(t *testing.T) {
 		{"www.youtube.com/v/O2rGTXHvPCQ", true},
 		{"youtube.com/v/O2rGTXHvPCQ", true},
 		{"youtu.be/O2rGTXHvPCQ", true},
+		{"https://m.youtube.com/watch?v=E-5cB2rUnvk", true},
+		{"http://m.youtube.com/watch?v=E-5cB2rUnvk", true},
 	}
 
 	for _, test := range uris {
@@ -66,6 +68,7 @@ func TestYoutubeFindUri(t *testing.T) {
 		{"https://youtu.be/-5wpm-gesOY", "http://www.youtube.com/watch?v=-5wpm-gesOY", false},
 		{"http://www.youtube.com/v/O2rGTXHvPCQ&hl=en_US&fs=1&", "http://www.youtube.com/watch?v=O2rGTXHvPCQ&hl=en_US&fs=1&", false},
 		{"http://www.youtube.com/watch?v=-5wpm-gesOY", "http://www.youtube.com/watch?v=-5wpm-gesOY", false},
+		{"http://m.youtube.com/watch?v=-5wpm-gesOY", "http://www.youtube.com/watch?v=-5wpm-gesOY", false},
 		{"http://youtu.be/-5wpm-gesOY", "http://www.youtube.com/watch?v=-5wpm-gesOY", false},
 		{"https://www.youtube.com/watch?feature=player_detailpage&v=WiDgeNBsMEA", "http://www.youtube.com/watch?v=WiDgeNBsMEA", false},
 		{"https://www.youtube.com/watch?v=E-5cB2rUnvk", "http://www.youtube.com/watch?v=E-5cB2rUnvk", false},
