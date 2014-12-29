@@ -275,7 +275,7 @@ func messageHandler(con *goty.IRCConn, event chan plug.IRCMessage, channels []st
 				break
 			}
 		}
-		if now.Sub(allBooks[key]) < time.Duration(delay)*time.Second { //|| now.Sub(chanBooks[key]) < time.Second*2 {
+		if !msg.Unlimited && now.Sub(allBooks[key]) < time.Duration(delay)*time.Second { //|| now.Sub(chanBooks[key]) < time.Second*2 {
 			continue
 		}
 		allBooks[key] = now

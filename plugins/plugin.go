@@ -10,10 +10,12 @@ import (
 )
 
 type IRCMessage struct {
-	Channel string
-	Msg     string
-	User    string
-	When    time.Time
+	Channel   string
+	Msg       string
+	User      string
+	Mask      string
+	When      time.Time
+	Unlimited bool
 }
 
 type PluginConf struct {
