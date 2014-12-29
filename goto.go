@@ -212,6 +212,7 @@ func main() {
 	go messageHandler(con, writeMessage, conf.Channels, 10, 2)
 
 	var plugins []plug.Plugin
+	plugins = append(plugins, new(plug.Autoban))
 	plugins = append(plugins, new(plug.AmiAmi))
 	plugins = append(plugins, new(plug.Help))
 	plugins = append(plugins, new(plug.Mal))
