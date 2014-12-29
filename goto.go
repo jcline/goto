@@ -284,7 +284,8 @@ func messageHandler(con *goty.IRCConn, event chan plug.IRCMessage, channels []st
 	}
 }
 
-var PRIVMSG = regexp.MustCompile(`:(.+)![^ ]+ PRIVMSG ([^ ]+) :(.*)`)
+var PRIVMSG = regexp.MustCompile(`:(.+![^ ]+) PRIVMSG ([^ ]+) :(.*)`)
+var USER = regexp.MustCompile(`([^!]+)![^@]+@(.+)`)
 
 func getMsgInfo(msg string) (*plug.IRCMessage, error) {
 	// :nick!~realname@0.0.0.0 PRIVMSG #chan :msg
@@ -296,7 +297,12 @@ func getMsgInfo(msg string) (*plug.IRCMessage, error) {
 	if len(match[0]) < 3 {
 		return imsg, errors.New("could not parse message")
 	}
-	imsg.User = match[0][1]
+
+	userMask := match[0][1]
+	userMatch := USER.FindAllStringSubmatch(userMask, -1)
+
+	imsg.User = userMatch[0][1]
+	imsg.Mask = userMatch[0][2]
 	imsg.Channel = match[0][2]
 	imsg.Msg = match[0][3]
 	return imsg, nil
