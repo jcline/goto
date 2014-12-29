@@ -42,8 +42,8 @@ func (plug MyFigureCollection) Write(msg *IRCMessage, body *string) (err error) 
 	return
 }
 
-func (plug MyFigureCollection) Match() *regexp.Regexp {
-	return plug.match
+func (plug MyFigureCollection) Match(msg *IRCMessage) bool {
+	return plug.match.MatchString(msg.Msg)
 }
 
 func (plug MyFigureCollection) Event() chan IRCMessage {

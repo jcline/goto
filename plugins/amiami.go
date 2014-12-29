@@ -42,8 +42,8 @@ func (plug AmiAmi) Write(msg *IRCMessage, body *string) (err error) {
 	return
 }
 
-func (plug AmiAmi) Match() *regexp.Regexp {
-	return plug.match
+func (plug AmiAmi) Match(msg *IRCMessage) bool {
+	return plug.match.MatchString(msg.Msg)
 }
 
 func (plug AmiAmi) Event() chan IRCMessage {

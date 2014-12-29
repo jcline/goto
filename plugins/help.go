@@ -64,8 +64,8 @@ func (plug Help) Action() {
 	}
 }
 
-func (plug Help) Match() *regexp.Regexp {
-	return plug.match
+func (plug Help) Match(msg *IRCMessage) bool {
+	return plug.match.MatchString(msg.Msg)
 }
 
 func (plug Help) Event() chan IRCMessage {

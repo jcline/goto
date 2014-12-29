@@ -78,8 +78,8 @@ func (plug Vimeo) Write(msg *IRCMessage, body *string) (err error) {
 	return
 }
 
-func (plug Vimeo) Match() *regexp.Regexp {
-	return plug.match
+func (plug Vimeo) Match(msg *IRCMessage) bool {
+	return plug.match.MatchString(msg.Msg)
 }
 
 func (plug Vimeo) Event() chan IRCMessage {

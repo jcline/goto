@@ -242,7 +242,7 @@ func main() {
 		_, notFound := plug.GetFirstMatch(matchSpoilers, &prepared.Msg)
 		if notFound != nil {
 			for _, plugin := range plugins {
-				if plugin.Match().MatchString(prepared.Msg) {
+				if plugin.Match(prepared) {
 					plugin.Event() <- *prepared
 				}
 			}

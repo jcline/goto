@@ -21,7 +21,7 @@ type PluginConf struct {
 }
 
 type Plugin interface {
-	Match() *regexp.Regexp
+	Match(*IRCMessage) bool
 	Event() chan IRCMessage
 	Setup(chan IRCMessage, PluginConf)
 }

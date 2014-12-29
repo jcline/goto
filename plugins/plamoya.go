@@ -42,8 +42,8 @@ func (plug Plamoya) Write(msg *IRCMessage, body *string) (err error) {
 	return
 }
 
-func (plug Plamoya) Match() *regexp.Regexp {
-	return plug.match
+func (plug Plamoya) Match(msg *IRCMessage) bool {
+	return plug.match.MatchString(msg.Msg)
 }
 
 func (plug Plamoya) Event() chan IRCMessage {

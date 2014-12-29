@@ -93,8 +93,8 @@ func (plug Youtube) Write(msg *IRCMessage, body *string) (err error) {
 	return
 }
 
-func (plug Youtube) Match() *regexp.Regexp {
-	return plug.match
+func (plug Youtube) Match(msg *IRCMessage) bool {
+	return plug.match.MatchString(msg.Msg)
 }
 
 func (plug Youtube) Event() chan IRCMessage {

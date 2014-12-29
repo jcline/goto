@@ -52,8 +52,8 @@ func (plug Reddit) Write(msg *IRCMessage, body *string) (err error) {
 	return
 }
 
-func (plug Reddit) Match() *regexp.Regexp {
-	return plug.match
+func (plug Reddit) Match(msg *IRCMessage) bool {
+	return plug.match.MatchString(msg.Msg)
 }
 
 func (plug Reddit) Event() chan IRCMessage {

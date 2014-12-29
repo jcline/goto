@@ -172,8 +172,8 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 	return
 }
 
-func (plug Mal) Match() *regexp.Regexp {
-	return plug.match
+func (plug Mal) Match(msg *IRCMessage) bool {
+	return plug.match.MatchString(msg.Msg)
 }
 
 func (plug Mal) Event() chan IRCMessage {
