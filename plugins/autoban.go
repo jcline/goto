@@ -10,9 +10,10 @@ import (
 
 type AutobanMatches struct {
 	Matcher *regexp.Regexp
-	Time    string `json:"time"`
-	Regex   string `json:"match"`
+	Time    string   `json:"time"`
+	Regex   string   `json:"match"`
 	Strip   []string `json:"strip"`
+	Reason  string   `json:"reason"`
 }
 
 type Autoban struct {
@@ -62,15 +63,22 @@ func removeColors(msg string) string {
 
 func (plug Autoban) Ban(msg IRCMessage) {
 	time := ""
+	reason := ":("
 	for index, matcher := range plug.autoBans {
 		cleaned := matcher.doCleanup(msg.Msg)
-		log.Println(matcher, cleaned)
 		if matcher.Matcher.MatchString(cleaned) {
 			time = plug.autoBans[index].Time
+			reason = plug.autoBans[index].Reason
 		}
 	}
 
-	logMsg := fmt.Sprintf("Banning user `%s` with `%s` from `%s` for `%s` at `%s`", msg.User, msg.Mask, msg.Channel, msg.Msg, msg.When)
+	logMsg := fmt.Sprintf(
+		"Banning user `%s` with `%s` from `%s` for `%s` at `%s`",
+		msg.User,
+		msg.Mask,
+		msg.Channel,
+		msg.Msg,
+		msg.When)
 	log.Println(logMsg)
 	plug.write <- IRCMessage{
 		Channel:   "Rodya",
@@ -89,7 +97,14 @@ func (plug Autoban) Ban(msg IRCMessage) {
 	if time == "" {
 		return
 	} else {
-		banMsg = fmt.Sprintf("akick %s add *!*@%s !T %s onii-chan... that's too lewd | Laala b& '%s' for '%s'", msg.Channel, msg.Mask, time, msg.User, msg.Msg)
+		banMsg = fmt.Sprintf(
+			"akick %s add *!*@%s !T %s %s | Laala b& '%s' for '%s'",
+			msg.Channel,
+			msg.Mask,
+			time,
+			reason,
+			msg.User,
+			msg.Msg)
 	}
 
 	log.Println(banMsg)
@@ -110,7 +125,7 @@ func (plug Autoban) Action() {
 
 func (matcher AutobanMatches) doCleanup(msg string) string {
 	cleaned := msg
-	for _,  stripper := range matcher.Strip {
+	for _, stripper := range matcher.Strip {
 		switch stripper {
 		case "colors":
 			cleaned = removeColors(cleaned)
