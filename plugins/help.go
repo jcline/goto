@@ -38,7 +38,7 @@ func (plug *Help) Setup(write chan IRCMessage, conf PluginConf) {
 
 	plug.no = map[string]string{
 		"blist": "How dare you! I'm no criminal!",
-		"list": "私は断る",
+		"list":  "私は断る",
 		"akick": "I'm not your slave!",
 	}
 	go plug.Action()
@@ -75,7 +75,7 @@ func (plug Help) Action() {
 					plug.write <- IRCMessage{Channel: msg.User, Msg: "┐('～`；)┌", User: msg.User, When: msg.When}
 				}
 			} else if val, ok := plug.no[key]; ok {
-					plug.write <- IRCMessage{Channel: msg.User, Msg: val, User: msg.User, When: msg.When}
+				plug.write <- IRCMessage{Channel: msg.User, Msg: val, User: msg.User, When: msg.When}
 			}
 		} else {
 			log.Println(err)
