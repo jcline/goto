@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"time"
 	"unicode"
 )
 
@@ -18,7 +19,12 @@ type AutobanMatches struct {
 
 type Autoban struct {
 	plugin
+	autobanStats
 	autoBans []AutobanMatches
+}
+
+type autobanStats struct {
+	prior []*IRCMessage
 }
 
 type AutobanConf struct {
@@ -61,24 +67,62 @@ func removeColors(msg string) string {
 	return regexp.MustCompile("\x03.").ReplaceAllLiteralString(msg, "")
 }
 
-func (plug Autoban) Ban(msg IRCMessage) {
+func (plug Autoban) computeReasonAndTime(msg *IRCMessage, match bool, spam bool) (notify string, chanserv string) {
 	time := ""
 	reason := ":("
-	for index, matcher := range plug.autoBans {
-		cleaned := matcher.doCleanup(msg.Msg)
-		if matcher.Matcher.MatchString(cleaned) {
-			time = plug.autoBans[index].Time
-			reason = plug.autoBans[index].Reason
-		}
+	if spam {
+		time = "5"
+		reason = "spam is bad and you should feel bad"
+		notify = fmt.Sprintf(
+			"Banning user `%s` with `%s` from `%s` for spam at `%s`",
+			msg.User,
+			msg.Mask,
+			msg.Channel,
+			msg.When)
+
+		chanserv = fmt.Sprintf(
+			"akick %s add *!*@%s !T %s %s | Laala b& '%s' for spam",
+			msg.Channel,
+			msg.Mask,
+			time,
+			reason,
+			msg.User)
 	}
 
-	logMsg := fmt.Sprintf(
-		"Banning user `%s` with `%s` from `%s` for `%s` at `%s`",
-		msg.User,
-		msg.Mask,
-		msg.Channel,
-		msg.Msg,
-		msg.When)
+	if match {
+		for index, matcher := range plug.autoBans {
+			cleaned := matcher.doCleanup(msg.Msg)
+			if matcher.Matcher.MatchString(cleaned) {
+				time = plug.autoBans[index].Time
+				reason = plug.autoBans[index].Reason
+			}
+		}
+
+		notify = fmt.Sprintf(
+			"Banning user `%s` with `%s` from `%s` for `%s` at `%s`",
+			msg.User,
+			msg.Mask,
+			msg.Channel,
+			msg.Msg,
+			msg.When)
+
+		chanserv = fmt.Sprintf(
+			"akick %s add *!*@%s !T %s %s | Laala b& '%s' for '%s'",
+			msg.Channel,
+			msg.Mask,
+			time,
+			reason,
+			msg.User,
+			msg.Msg)
+	}
+
+	return
+}
+
+func (plug Autoban) Ban(msg *IRCMessage, match bool, spam bool) {
+
+	logMsg, banMsg := plug.computeReasonAndTime(msg, match, spam)
+
 	log.Println(logMsg)
 	plug.write <- IRCMessage{
 		Channel:   "Rodya",
@@ -93,20 +137,6 @@ func (plug Autoban) Ban(msg IRCMessage) {
 		return
 	}
 
-	banMsg := ""
-	if time == "" {
-		return
-	} else {
-		banMsg = fmt.Sprintf(
-			"akick %s add *!*@%s !T %s %s | Laala b& '%s' for '%s'",
-			msg.Channel,
-			msg.Mask,
-			time,
-			reason,
-			msg.User,
-			msg.Msg)
-	}
-
 	log.Println(banMsg)
 	plug.write <- IRCMessage{
 		Channel:   "ChanServ",
@@ -119,7 +149,7 @@ func (plug Autoban) Ban(msg IRCMessage) {
 
 func (plug Autoban) Action() {
 	for msg := range plug.event {
-		go plug.Ban(msg)
+		go plug.Ban(&msg, true, false)
 	}
 }
 
@@ -136,18 +166,41 @@ func (matcher AutobanMatches) doCleanup(msg string) string {
 	return cleaned
 }
 
-func (plug Autoban) Match(msg *IRCMessage) bool {
+func computeStats(msgs []*IRCMessage, last *IRCMessage) bool {
+	count := 0
+	time := time.Now().Add(time.Second * -10)
+	for _, msg := range msgs {
+		if msg.User == last.User && msg.When.After(time) {
+			count += 1
+		}
+	}
+	log.Println(last.User, count)
+	if count >= 5 {
+		return true
+	}
+	return false
+}
+
+func (plug *Autoban) Match(msg *IRCMessage) bool {
+	plug.prior = append(plug.prior, msg)
+	if len(plug.prior) > 110 {
+		plug.prior = plug.prior[:100]
+	}
+
+	ban := computeStats(plug.prior, msg)
+	if ban {
+		plug.Ban(msg, false, true)
+	}
+
 	var cleaned string
 	matched := false
 	for _, matcher := range plug.autoBans {
 		cleaned = matcher.doCleanup(msg.Msg)
-		log.Println(plug.match.String(), cleaned)
 		matched = matched || plug.match.MatchString(cleaned)
 		if matched {
 			break
 		}
 	}
-	log.Println(matched)
 
 	return matched
 }
