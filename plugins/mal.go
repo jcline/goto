@@ -8,12 +8,14 @@ import (
 	//"html"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type entries []entry
@@ -96,6 +98,10 @@ func (plug *Mal) FindUri(candidate *string) (uri *string, err error) {
 
 func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 	fmt.Println(plug)
+	if body == nil {
+		plug.write <- IRCMessage{Channel: msg.Channel, Msg:  "┐('～`；)┌", User: msg.User, When: msg.When}
+		return
+	}
 	if len(*body) < 10 {
 		plug.write <- IRCMessage{Channel: msg.Channel,
 			Msg:  "┐('～`；)┌    http://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
@@ -105,8 +111,6 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 	}
 
 	fmt.Printf("%v\n", *body)
-	//unescaped := html.UnescapeString(*body)
-	//fmt.Printf("%v\n", unescaped)
 	var r result
 	err = xml.Unmarshal([]byte(*body), &r)
 	if err != nil {
@@ -185,16 +189,25 @@ func malScrapeAndSend(plug scrapePlugin, conf MalConf) {
 		uri, err := plug.FindUri(&msg.Msg)
 		if err != nil {
 			log.Println(err)
+			plug.Write(&msg, nil)
 			return
 		}
 
-		client := &http.Client{}
+		transport := http.Transport {
+			Dial: func(network, addr string) (net.Conn, error) {
+				return net.DialTimeout(network, addr, time.Duration(3 * time.Second))
+			},
+		}
+		client := &http.Client{
+			Transport: &transport,
+		}
 		request, err := http.NewRequest("GET", *uri, nil)
 		request.SetBasicAuth(conf.User, conf.Password)
 		request.Header.Set("User-Agent", conf.UserAgent)
 		resp, err := client.Do(request)
 		if err != nil {
 			log.Println(err)
+			plug.Write(&msg, nil)
 			return
 		}
 
@@ -202,6 +215,7 @@ func malScrapeAndSend(plug scrapePlugin, conf MalConf) {
 		defer resp.Body.Close()
 		if err != nil {
 			log.Println(err)
+			plug.Write(&msg, nil)
 			return
 		}
 		body := string(bodyBytes)
@@ -478,5 +492,6 @@ func malEmploysShittyProgrammers(badlyEscapedXml string) (correctlyEscapedXml *s
 	}
 	correctlyEscapedXml = &badlyEscapedXml
 
+	log.Println(correctlyEscapedXml)
 	return
 }

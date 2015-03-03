@@ -16,8 +16,6 @@ import (
 	"time"
 )
 
-var user = ""
-
 type UriFunc func(*string) (*string, error)
 type WriteFunc func(*plug.IRCMessage, *string) (*plug.IRCMessage, error)
 
@@ -200,7 +198,7 @@ func main() {
 	}
 
 	log.Println(conf)
-	user = conf.UserName
+	conf.Plugins.UserName = conf.UserName
 	con, err := goty.Dial(conf.Server, conf.UserName, conf.RealName)
 	if err != nil {
 		log.Fatal(err)
@@ -211,8 +209,8 @@ func main() {
 	writeMessage := make(chan plug.IRCMessage, 1000)
 	go messageHandler(con, writeMessage, conf.Channels, 10, 2)
 
+	var autobanner plug.Autoban
 	var plugins []plug.Plugin
-	plugins = append(plugins, new(plug.Autoban))
 	plugins = append(plugins, new(plug.AmiAmi))
 	plugins = append(plugins, new(plug.Help))
 	plugins = append(plugins, new(plug.Mal))
@@ -222,6 +220,7 @@ func main() {
 	plugins = append(plugins, new(plug.Vimeo))
 	plugins = append(plugins, new(plug.Youtube))
 
+	autobanner.Setup(writeMessage, conf.Plugins)
 	for _, plugin := range plugins {
 		plugin.Setup(writeMessage, conf.Plugins)
 	}
@@ -232,12 +231,16 @@ func main() {
 	}
 
 	for msg := range con.Read {
-		log.Printf("%s\n", msg)
+		log.Println(msg)
 		prepared, err := getMsgInfo(msg)
 		if err != nil {
 			continue
 		}
 		prepared.When = time.Now()
+
+		if autobanner.Match(prepared) {
+			continue
+		}
 
 		// half assed filtering
 		_, notFound := plug.GetFirstMatch(matchSpoilers, &prepared.Msg)

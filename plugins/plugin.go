@@ -19,8 +19,9 @@ type IRCMessage struct {
 }
 
 type PluginConf struct {
-	Mal     MalConf     `json:"mal"`
-	Autoban AutobanConf `json:"autoban"`
+	Mal      MalConf     `json:"mal"`
+	Autoban  AutobanConf `json:"autoban"`
+	UserName string
 }
 
 type Plugin interface {

@@ -2,7 +2,7 @@ package plugins
 
 import (
 	"errors"
-	"html"
+	"encoding/json"
 	"net/url"
 	"path"
 	"regexp"
@@ -43,9 +43,12 @@ func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
 		}
 	}
 
+	full_start := "https://gdata.youtube.com/feeds/api/videos/"
+	full_end := "?v=2&alt=json"
+
 	if ok, _ := path.Match("/v/*", parsed.Path); ok {
 		_, file := path.Split(parsed.Path)
-		full := "http://www.youtube.com/watch?v=" + file
+		full := full_start + file + full_end
 		uri = &full
 	} else if ok, _ = path.Match("/watch", parsed.Path); ok {
 		query := parsed.Query()
@@ -56,12 +59,12 @@ func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
 			return
 		}
 
-		full := "http://www.youtube.com/watch?v=" + val[0]
+		full := full_start + val[0] + full_end
 		uri = &full
 	} else if ok, _ = path.Match("/*", parsed.Path); ok {
 		// This condition must come last because it will match those above it as well
 		_, file := path.Split(parsed.Path)
-		full := "http://www.youtube.com/watch?v=" + file
+		full := full_start + file + full_end
 		uri = &full
 	} else {
 		err = errors.New("Could not find URI")
@@ -71,23 +74,36 @@ func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
 }
 
 func (plug Youtube) Write(msg *IRCMessage, body *string) (err error) {
-	title, err := GetFirstMatch(plug.title, body)
+	type value struct {
+		Value string `json:"$t"`
+	}
+	type author struct {
+		Name value `json:"name"`
+	}
+	type entry struct {
+		Authors []author `json:"author"`
+		Title value `json:"title"`
+	}
+	type results struct {
+		Entry entry `json:"entry"`
+	}
+
+	var dat results
+	err = json.Unmarshal([]byte(*body), &dat)
 	if err != nil {
 		return
 	}
 
-	user, err := GetFirstMatch(plug.user, body)
-	if err != nil {
-		return
-	}
-
-	_, notFound := GetFirstMatch(plug.spoiler, title)
+	title := dat.Entry.Title.Value
+	user := dat.Entry.Authors[0].Name.Value
+	_, notFound := GetFirstMatch(plug.spoiler, &title)
 	if notFound != nil {
 		plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,
-			Msg: "[YouTube] " + html.UnescapeString(*title+" uploaded by "+*user)}
+		  Msg: "[YouTube] " + title + " uploaded by " + user}
+			//Msg: "[YouTube] " + html.UnescapeString(*title+" uploaded by "+*user)}
 	} else {
 		plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,
-			Msg: "[YouTube] [[Title omitted due to possible spoilers]] uploaded by " + *user}
+			Msg: "[YouTube] [[Title omitted due to possible spoilers]] uploaded by " + user}
 	}
 
 	return

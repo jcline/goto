@@ -21,6 +21,7 @@ type Autoban struct {
 	plugin
 	autobanStats
 	autoBans []AutobanMatches
+	user     string
 }
 
 type autobanStats struct {
@@ -32,6 +33,7 @@ type AutobanConf struct {
 }
 
 func (plug *Autoban) Setup(write chan IRCMessage, conf PluginConf) {
+	plug.user = conf.UserName
 	plug.write = write
 	plug.event = make(chan IRCMessage, 1000)
 
@@ -41,6 +43,9 @@ func (plug *Autoban) Setup(write chan IRCMessage, conf PluginConf) {
 	matches := conf.Autoban.Matches
 	for i := 0; i < len(matches); i++ {
 		buffer.WriteString(matches[i].Regex)
+		if (i != len(matches)-1) {
+			buffer.WriteString(`|`)
+		}
 		matches[i].Matcher = regexp.MustCompile(matches[i].Regex)
 	}
 	buffer.WriteString(`)`)
@@ -168,7 +173,7 @@ func (matcher AutobanMatches) doCleanup(msg string) string {
 
 func computeStats(msgs []*IRCMessage, last *IRCMessage) bool {
 	count := 0
-	time := time.Now().Add(time.Second * -10)
+	time := time.Now().Add(time.Second * -5)
 	for _, msg := range msgs {
 		if msg.User == last.User && msg.When.After(time) {
 			count += 1
@@ -182,24 +187,33 @@ func computeStats(msgs []*IRCMessage, last *IRCMessage) bool {
 }
 
 func (plug *Autoban) Match(msg *IRCMessage) bool {
+	if msg.Channel == plug.user {
+		return false
+	}
+
 	plug.prior = append(plug.prior, msg)
 	if len(plug.prior) > 110 {
-		plug.prior = plug.prior[:100]
+		plug.prior = plug.prior[len(plug.prior)-100 : len(plug.prior)]
 	}
 
 	ban := computeStats(plug.prior, msg)
 	if ban {
 		plug.Ban(msg, false, true)
+		return false
 	}
 
 	var cleaned string
 	matched := false
 	for _, matcher := range plug.autoBans {
 		cleaned = matcher.doCleanup(msg.Msg)
-		matched = matched || plug.match.MatchString(cleaned)
+		matched = plug.match.MatchString(cleaned)
 		if matched {
 			break
 		}
+	}
+
+	if matched {
+		plug.event <- *msg
 	}
 
 	return matched
