@@ -20,6 +20,9 @@ func (plug *Plamoya) Setup(write chan IRCMessage, conf PluginConf) {
 }
 
 func (plug *Plamoya) FindUri(candidate *string) (uri *string, err error) {
+	if ok, _ := regexp.MatchString(".*\\.(jpg|png|gif)", *uri); ok {
+		return
+	}
 	uri, err = GetFirstMatch(plug.match, candidate)
 	if err != nil {
 		uri = nil

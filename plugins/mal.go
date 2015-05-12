@@ -173,7 +173,9 @@ func malScrapeAndSend(plug *Mal, conf MalConf) {
 		uri, err := plug.FindUri(&msg.Msg)
 		if err != nil {
 			log.Println(err)
-			plug.Write(&msg, nil)
+			plug.write <- IRCMessage{Channel: msg.Channel,
+				Msg:  "┐('～`；)┌    http://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
+				User: msg.User, When: msg.When}
 			return
 		}
 
@@ -182,12 +184,14 @@ func malScrapeAndSend(plug *Mal, conf MalConf) {
 		request.Header.Set("User-Agent", conf.UserAgent)
 
 		client := &http.Client{
-			Timeout: time.Duration(1 * time.Second),
+			Timeout: time.Duration(5 * time.Second),
 		}
 		resp, err := client.Do(request)
 		if err != nil {
 			log.Println(err)
-			plug.Write(&msg, nil)
+			plug.write <- IRCMessage{Channel: msg.Channel,
+				Msg:  "┐('～`；)┌    http://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
+				User: msg.User, When: msg.When}
 			return
 		}
 
