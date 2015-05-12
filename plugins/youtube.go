@@ -3,6 +3,7 @@ package plugins
 import (
 	"errors"
 	"encoding/json"
+	"log"
 	"net/url"
 	"path"
 	"regexp"
@@ -11,10 +12,16 @@ import (
 type Youtube struct {
 	plugin
 	spoiler, title, user *regexp.Regexp
+	key string
+}
+
+type YoutubeConf struct {
+	Key string `json:"key"`
 }
 
 func (plug *Youtube) Setup(write chan IRCMessage, conf PluginConf) {
 	plug.write = write
+	plug.key = conf.Youtube.Key
 	plug.match = regexp.MustCompile(`((?:https?://|)(?:www\.|m\.|)(?:youtu(?:\.be|be\.com)(?:/v/|/watch\?v=|/)[^\s/]+))(?: |$)`)
 	plug.spoiler = regexp.MustCompile(`(?i)(.*spoil.*)`)
 	plug.title = regexp.MustCompile(`<title>(.+) - YouTube</title>`)
@@ -43,12 +50,11 @@ func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
 		}
 	}
 
-	full_start := "https://gdata.youtube.com/feeds/api/videos/"
-	full_end := "?v=2&alt=json"
+	full_start := "https://www.googleapis.com/youtube/v3/videos?key=" + plug.key + "&part=snippet&id="
 
 	if ok, _ := path.Match("/v/*", parsed.Path); ok {
 		_, file := path.Split(parsed.Path)
-		full := full_start + file + full_end
+		full := full_start + file
 		uri = &full
 	} else if ok, _ = path.Match("/watch", parsed.Path); ok {
 		query := parsed.Query()
@@ -59,12 +65,12 @@ func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
 			return
 		}
 
-		full := full_start + val[0] + full_end
+		full := full_start + val[0]
 		uri = &full
 	} else if ok, _ = path.Match("/*", parsed.Path); ok {
 		// This condition must come last because it will match those above it as well
 		_, file := path.Split(parsed.Path)
-		full := full_start + file + full_end
+		full := full_start + file
 		uri = &full
 	} else {
 		err = errors.New("Could not find URI")
@@ -74,18 +80,17 @@ func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
 }
 
 func (plug Youtube) Write(msg *IRCMessage, body *string) (err error) {
-	type value struct {
-		Value string `json:"$t"`
+	type snippet struct {
+		Title string `json:"title"`
+		ChannelTitle string `json:"channelTitle"`
 	}
-	type author struct {
-		Name value `json:"name"`
+
+	type item struct {
+		Snippet snippet `json:"snippet"`
 	}
-	type entry struct {
-		Authors []author `json:"author"`
-		Title value `json:"title"`
-	}
+
 	type results struct {
-		Entry entry `json:"entry"`
+		Item []item `json:"items"`
 	}
 
 	var dat results
@@ -94,8 +99,13 @@ func (plug Youtube) Write(msg *IRCMessage, body *string) (err error) {
 		return
 	}
 
-	title := dat.Entry.Title.Value
-	user := dat.Entry.Authors[0].Name.Value
+	if len(dat.Item) == 0 {
+		log.Println("Error:" + *body)
+		return
+	}
+
+	title := dat.Item[0].Snippet.Title
+	user := dat.Item[0].Snippet.ChannelTitle
 	_, notFound := GetFirstMatch(plug.spoiler, &title)
 	if notFound != nil {
 		plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,

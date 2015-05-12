@@ -110,7 +110,7 @@ func getStr(prompt string, failurePrompt string, invalid func(string) bool) (res
 	}
 }
 
-func createConfig(path string, useMal bool) (conf Settings, err error) {
+func createConfig(path string, useMal bool, useYoutube bool) (conf Settings, err error) {
 
 	_, err = exists(path)
 	log.Println(exists, err)
@@ -160,6 +160,13 @@ func createConfig(path string, useMal bool) (conf Settings, err error) {
 		}
 	}
 
+	if useYoutube {
+		conf.Plugins.Youtube.Key, err = getStr("Youtube API Key:", "API key must not be empty", isEmpty)
+		if err != nil {
+			return
+		}
+	}
+
 	js, err := json.Marshal(conf)
 	if err != nil {
 		return
@@ -185,7 +192,7 @@ func main() {
 				log.Fatal(err)
 			}
 			if response == "y" || response == "Y" {
-				conf, err = createConfig(path, true)
+				conf, err = createConfig(path, true, true)
 				if err != nil {
 					log.Fatal(err)
 				}

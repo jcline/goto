@@ -21,6 +21,7 @@ type IRCMessage struct {
 type PluginConf struct {
 	Mal      MalConf     `json:"mal"`
 	Autoban  AutobanConf `json:"autoban"`
+	Youtube  YoutubeConf `json:"youtube"`
 	UserName string
 }
 
