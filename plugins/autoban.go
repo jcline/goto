@@ -22,6 +22,7 @@ type Autoban struct {
 	autobanStats
 	autoBans []AutobanMatches
 	user     string
+	self     string
 }
 
 type autobanStats struct {
@@ -30,10 +31,12 @@ type autobanStats struct {
 
 type AutobanConf struct {
 	Matches []AutobanMatches `json:"matchers"`
+	User    string           `json:"notify_user"`
 }
 
 func (plug *Autoban) Setup(write chan IRCMessage, conf PluginConf) {
-	plug.user = conf.UserName
+	plug.user = conf.Autoban.User
+	plug.self = conf.UserName
 	plug.write = write
 	plug.event = make(chan IRCMessage, 1000)
 
@@ -43,7 +46,7 @@ func (plug *Autoban) Setup(write chan IRCMessage, conf PluginConf) {
 	matches := conf.Autoban.Matches
 	for i := 0; i < len(matches); i++ {
 		buffer.WriteString(matches[i].Regex)
-		if (i != len(matches)-1) {
+		if i != len(matches)-1 {
 			buffer.WriteString(`|`)
 		}
 		matches[i].Matcher = regexp.MustCompile(matches[i].Regex)
@@ -129,12 +132,14 @@ func (plug Autoban) Ban(msg *IRCMessage, match bool, spam bool) {
 	logMsg, banMsg := plug.computeReasonAndTime(msg, match, spam)
 
 	log.Println(logMsg)
-	plug.write <- IRCMessage{
-		Channel:   "Rodya",
-		Msg:       logMsg,
-		User:      msg.User,
-		When:      msg.When,
-		Unlimited: true,
+	if len(plug.user) > 0 {
+		plug.write <- IRCMessage{
+			Channel:   plug.user,
+			Msg:       logMsg,
+			User:      msg.User,
+			When:      msg.When,
+			Unlimited: true,
+		}
 	}
 
 	if len(msg.Mask) < 3 {
@@ -187,7 +192,7 @@ func computeStats(msgs []*IRCMessage, last *IRCMessage) bool {
 }
 
 func (plug *Autoban) Match(msg *IRCMessage) bool {
-	if msg.Channel == plug.user {
+	if msg.Channel == plug.self {
 		return false
 	}
 
