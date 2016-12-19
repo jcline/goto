@@ -158,6 +158,10 @@ func createConfig(path string, useMal bool, useYoutube bool) (conf Settings, err
 		if err != nil {
 			return
 		}
+		conf.Plugins.Mal.UserAgent , err = getStr("MAL User Agent:", "User Agent must not be empty", isEmpty)
+		if err != nil {
+			return
+		}
 	}
 
 	if useYoutube {
