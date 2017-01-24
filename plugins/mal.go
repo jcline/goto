@@ -87,7 +87,7 @@ func (plug *Mal) FindUri(candidate *string) (uri *string, err error) {
 		return
 	}
 
-	full := "http://myanimelist.net/api/" + *plug.searchType + "/search.xml?q=" + url.QueryEscape(*terms)
+	full := "https://myanimelist.net/api/" + *plug.searchType + "/search.xml?q=" + url.QueryEscape(*terms)
 	plug.terms = terms
 	uri = &full
 	fmt.Println(plug)
@@ -100,7 +100,7 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 	err = xml.Unmarshal([]byte(*body), &r)
 	if err != nil {
 		plug.write <- IRCMessage{Channel: msg.Channel,
-			Msg:  "┐('～`；)┌    http://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
+			Msg:  "┐('～`；)┌    https://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
 			User: msg.User, When: msg.When}
 		return
 	}
@@ -138,9 +138,9 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 			*/
 			nsfw = true
 
-			resultString += result.Title + /*class + */ " http://myanimelist.net/" + *plug.searchType + "/" + strconv.Itoa(result.Id) + "  "
+			resultString += result.Title + /*class + */ " https://myanimelist.net/" + *plug.searchType + "/" + strconv.Itoa(result.Id) + "  "
 		} else {
-			resultString += result.Title + " http://myanimelist.net/" + *plug.searchType + "/" + strconv.Itoa(result.Id) + "  "
+			resultString += result.Title + " https://myanimelist.net/" + *plug.searchType + "/" + strconv.Itoa(result.Id) + "  "
 			nsfw = true
 		}
 		if count >= length {
@@ -153,7 +153,7 @@ func (plug Mal) Write(msg *IRCMessage, body *string) (err error) {
 	}
 
 	if len(r.Entries) > 3 {
-		resultString += "More: " + "http://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms)
+		resultString += "More: " + "https://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms)
 	}
 
 	plug.write <- IRCMessage{Channel: msg.Channel, Msg: resultString, User: msg.User, When: msg.When}
@@ -174,7 +174,7 @@ func malScrapeAndSend(plug *Mal, conf MalConf) {
 		if err != nil {
 			log.Println(err)
 			plug.write <- IRCMessage{Channel: msg.Channel,
-				Msg:  "┐('～`；)┌    http://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
+				Msg:  "ヽ(●ﾟ´Д｀ﾟ●)ﾉﾟ   https://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
 				User: msg.User, When: msg.When}
 			return
 		}
@@ -190,7 +190,7 @@ func malScrapeAndSend(plug *Mal, conf MalConf) {
 		if err != nil {
 			log.Println(err)
 			plug.write <- IRCMessage{Channel: msg.Channel,
-				Msg:  "┐('～`；)┌    http://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
+				Msg:  "（´＿｀）   https://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
 				User: msg.User, When: msg.When}
 			return
 		}
@@ -213,12 +213,16 @@ func malScrapeAndSend(plug *Mal, conf MalConf) {
 			}
 		case 204:
 			plug.write <- IRCMessage{Channel: msg.Channel,
-				Msg:  "。ﾟ(ﾟﾉД｀ﾟ)ﾟ｡ No results:\thttp://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
+				Msg:  "。ﾟ(ﾟﾉД｀ﾟ)ﾟ｡ No results:\thttps://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
 				User: msg.User, When: msg.When}
 		default:
 			plug.write <- IRCMessage{Channel: msg.Channel,
-				Msg:  "┐('～`；)┌    http://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
+				Msg:  "┐('～`；)┌    https://myanimelist.net/" + *plug.searchType + ".php?q=" + url.QueryEscape(*plug.terms),
 				User: msg.User, When: msg.When}
+			log.Println(resp.StatusCode)
+			bodyBytes, _ := ioutil.ReadAll(resp.Body)
+			defer resp.Body.Close()
+			log.Println(string(bodyBytes))
 		}
 	}
 

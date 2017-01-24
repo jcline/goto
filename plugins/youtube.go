@@ -1,8 +1,8 @@
 package plugins
 
 import (
-	"errors"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/url"
 	"path"
@@ -12,7 +12,7 @@ import (
 type Youtube struct {
 	plugin
 	spoiler, title, user *regexp.Regexp
-	key string
+	key                  string
 }
 
 type YoutubeConf struct {
@@ -81,7 +81,7 @@ func (plug *Youtube) FindUri(candidate *string) (uri *string, err error) {
 
 func (plug Youtube) Write(msg *IRCMessage, body *string) (err error) {
 	type snippet struct {
-		Title string `json:"title"`
+		Title        string `json:"title"`
 		ChannelTitle string `json:"channelTitle"`
 	}
 
@@ -109,8 +109,8 @@ func (plug Youtube) Write(msg *IRCMessage, body *string) (err error) {
 	_, notFound := GetFirstMatch(plug.spoiler, &title)
 	if notFound != nil {
 		plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,
-		  Msg: "[YouTube] " + title + " uploaded by " + user}
-			//Msg: "[YouTube] " + html.UnescapeString(*title+" uploaded by "+*user)}
+			Msg: "[YouTube] " + title + " uploaded by " + user}
+		//Msg: "[YouTube] " + html.UnescapeString(*title+" uploaded by "+*user)}
 	} else {
 		plug.write <- IRCMessage{Channel: msg.Channel, User: msg.User, When: msg.When,
 			Msg: "[YouTube] [[Title omitted due to possible spoilers]] uploaded by " + user}
